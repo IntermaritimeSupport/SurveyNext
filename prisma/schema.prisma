@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User management
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      Role     @default(USER)
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLogin DateTime?
+  
+  // Relations
+  surveys   Survey[]
+  responses SurveyResponse[]
+  
+  @@map("users")
+}
+
+model Question {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  type        QuestionType
+  required    Boolean     @default(false)
+  order       Int
+  options     Json?       // For multiple choice, checkboxes, dropdown, etc.
+  validation  Json?       // Validation rules (min, max, pattern, etc.)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  // Relations
+  surveyId    String
+  survey      Survey      @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  answers     Answer[]
+  
+  @@map("questions")
+}
+
+model SurveyResponse {
+  id          String   @id @default(cuid())
+  email       String?  // Optional for anonymous surveys
+  ipAddress   String?
+  userAgent   String?
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  isComplete  Boolean  @default(false)
+  
+  // Relations
+  surveyId    String
+  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  answers     Answer[]
+  
+  @@map("survey_responses")
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+  value      Json     // Flexible storage for different answer types
+  createdAt  DateTime @default(now())
+  
+  // Relations
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  responseId String
+  response   SurveyResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  
+  @@unique([questionId, responseId])
+  @@map("answers")
+}
+
+// System settings
+model SystemSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("system_settings")
+}
+
+// Email templates
+model EmailTemplate {
+  id       String @id @default(cuid())
+  name     String @unique
+  subject  String
+  body     String
+  variables Json?  // Available template variables
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("email_templates")
+}
+
+// Analytics and tracking
+model Survey {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  customLink  String   @unique
+  status      SurveyStatus @default(DRAFT)
+  isAnonymous Boolean  @default(false)
+  showProgress Boolean @default(true)
+  allowMultipleResponses Boolean @default(false)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions   Question[]
+  responses   SurveyResponse[]
+  
+  // ¡Añade esta línea! Define la relación inversa con SurveyAnalytics
+  analytics   SurveyAnalytics[] // O SurveyAnalytics? si una encuesta puede no tener análisis aún.
+
+  @@map("surveys")
+}
+
+// ... (el resto de tus modelos hasta SurveyAnalytics)
+
+model SurveyAnalytics {
+  id        String   @id @default(cuid())
+  surveyId  String
+  date      DateTime @default(now())
+  views     Int      @default(0)
+  starts    Int      @default(0)
+  completions Int    @default(0)
+  avgCompletionTime Int? // in seconds
+
+  survey    Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  @@unique([surveyId, date])
+  @@map("survey_analytics")
+}
+// Enums
+enum Role {
+  ADMIN
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum SurveyStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  CLOSED
+  ARCHIVED
+}
+
+enum QuestionType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  EMAIL
+  PHONE
+  URL
+  DATE
+  TIME
+  MULTIPLE_CHOICE
+  CHECKBOXES
+  DROPDOWN
+  SCALE
+  MATRIX
+  FILE_UPLOAD
+  SIGNATURE
+}
