@@ -279,8 +279,8 @@ export default function UsersPage() {
                               <Edit className="h-4 w-4" />
                             </Button>
                           </Link>
-                          <Button variant="destructive" size="sm" onClick={() => handleDeleteUser(user.id, user.name)} title="Eliminar Usuario">
-                            <Trash2 className="h-4 w-4" />
+                          <Button color="bg-red-500" variant="destructive" size="sm" onClick={() => handleDeleteUser(user.id, user.name)} title="Eliminar Usuario">
+                            <Trash2 className="h-4 w-4 text-black" />
                           </Button>
                         </div>
                       </div>
