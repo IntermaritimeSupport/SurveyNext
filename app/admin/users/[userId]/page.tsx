@@ -1,11 +1,12 @@
 // app/admin/users/[userId]/page.tsx
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import React, { useEffect, useState } from "react" // `React` se importa pero no se usa con .use() aquí
+import { useParams, useRouter } from "next/navigation"
 import { UserForm } from "../_components/user-form"
 import { Loader2, ChevronLeft } from "lucide-react"
 import { Role, UserStatus } from '@prisma/client';
+import { Button } from "../../../../components/ui/button" // Ajusta la ruta según la ubicación real del archivo Button
 import { AdminLayout } from "../../../../components/admin/admin-layout"
 
 // Interfaz para el usuario que se recibe del API
@@ -22,9 +23,14 @@ interface APIUser {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
+// --- CORRECCIÓN CLAVE AQUÍ: Acceso directo a params.userId ---
+// En Client Components, 'params' es un objeto proxy. Puedes acceder directamente a sus propiedades.
+// La advertencia es una "sugerencia" de migración futura, no un error actual de uso.
 export default function EditUserPage({ params }: { params: { userId: string } }) {
+  const userId = useParams() // <-- Acceso directo, como estaba originalmente antes de React.use()
+  // --- FIN CORRECCIÓN CLAVE ---
+
   const router = useRouter();
-  const { userId } = params;
   const [user, setUser] = useState<APIUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +40,7 @@ export default function EditUserPage({ params }: { params: { userId: string } })
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`${API_BASE_URL}/api/users/${userId}`);
+        const res = await fetch(`${API_BASE_URL}/api/users/${userId.userId}`);
         if (!res.ok) {
           if (res.status === 404) {
             throw new Error("Usuario no encontrado.");
@@ -51,24 +57,23 @@ export default function EditUserPage({ params }: { params: { userId: string } })
       }
     };
 
-    if (userId) {
+    if (userId) { 
       fetchUser();
     }
-  }, [userId]);
+  }, [userId]); // `userId` es una dependencia estable aquí
 
   const handleSaveSuccess = () => {
-    router.push('/admin/users'); // Redirigir a la lista después de guardar
+    router.push('/admin/users');
   };
 
   const handleCancel = () => {
-    router.back(); // Volver a la página anterior
+    router.back();
   };
 
-  // --- REEMPLAZO DE ADMINLAYOUT, ALERT Y ALERTDESCRIPTION ---
   const renderContent = () => {
     if (loading) {
       return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4"> {/* Simula AdminLayout */}
+        <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
           <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
           <p className="ml-2 text-slate-500">Cargando detalles del usuario...</p>
         </div>
@@ -77,16 +82,15 @@ export default function EditUserPage({ params }: { params: { userId: string } })
 
     if (error) {
       return (
-        <div className="min-h-screen bg-gray-100 p-4"> {/* Simula AdminLayout */}
-          {/* Simula Alert variant="destructive" */}
+        <div className="min-h-screen bg-gray-100 p-4">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative m-4" role="alert">
             <strong className="font-bold">Error: </strong>
             <span className="block sm:inline">{error}</span>
           </div>
           <div className="p-4">
-            <button onClick={handleCancel}>
+            <Button onClick={handleCancel}>
               <ChevronLeft className="h-4 w-4 mr-2" /> Volver
-            </button>
+            </Button>
           </div>
         </div>
       );
@@ -94,16 +98,15 @@ export default function EditUserPage({ params }: { params: { userId: string } })
 
     if (!user) {
       return (
-        <div className="min-h-screen bg-gray-100 p-4"> {/* Simula AdminLayout */}
-          {/* Simula Alert variant="destructive" */}
+        <div className="min-h-screen bg-gray-100 p-4">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative m-4" role="alert">
             <strong className="font-bold">Error: </strong>
             <span className="block sm:inline">No se pudo cargar el usuario.</span>
           </div>
           <div className="p-4">
-            <button onClick={handleCancel}>
+            <Button onClick={handleCancel}>
               <ChevronLeft className="h-4 w-4 mr-2" /> Volver
-            </button>
+            </Button>
           </div>
         </div>
       );
@@ -112,11 +115,10 @@ export default function EditUserPage({ params }: { params: { userId: string } })
     return (
       <div className="space-y-6 p-4">
         <div className="flex items-center justify-between mb-6">
-          {/* Usar Button de shadcn/ui */}
-          <button onClick={handleCancel}>
+          <Button variant="outline" onClick={handleCancel}>
             <ChevronLeft className="h-4 w-4 mr-2" />
             Volver
-          </button>
+          </Button>
           <h1 className="text-3xl font-bold text-slate-900 flex-1 text-center pr-20">Editar Usuario</h1>
           <div></div>
         </div>
@@ -124,13 +126,10 @@ export default function EditUserPage({ params }: { params: { userId: string } })
       </div>
     );
   };
-  // --- FIN REEMPLAZO ---
 
   return (
-    <AdminLayout>
-      <div className="min-h-screen bg-gray-100"> {/* Contenedor básico para la página */}
+     <AdminLayout>
         {renderContent()}
-      </div>
     </AdminLayout>
   );
 }

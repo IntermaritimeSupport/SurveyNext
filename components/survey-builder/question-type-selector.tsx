@@ -4,25 +4,23 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { QuestionType as PrismaQuestionType } from '@prisma/client'; // Importar de Prisma
+import { QuestionType as PrismaQuestionType } from '@prisma/client';
 import {
   Type,
   AlignLeft,
   ChevronDown,
   CheckSquare,
   Circle,
-  Square, // Este podría ser para un checkbox simple o un placeholder
-  Star,
-  BarChart3,
-  Calendar,
-  Mail,
   Hash,
+  Mail,
   Phone,
   Link as LinkIcon,
-  Signature,
-  Upload,
+  Calendar,
+  Clock,
+  BarChart3,
   Grid,
-  Clock // Para TIME
+  Upload,
+  Signature,
 } from "lucide-react"
 
 interface QuestionTypeSelectorProps {
@@ -30,96 +28,120 @@ interface QuestionTypeSelectorProps {
   onCancel: () => void
 }
 
-const questionTypes = [
+// Extiende la interfaz para incluir la propiedad 'enabled'
+interface QuestionTypeConfig {
+  type: PrismaQuestionType;
+  name: string;
+  description: string;
+  icon: React.ElementType; // Tipo para un componente de icono de Lucide React
+  enabled: boolean; // <-- NUEVO CAMPO
+}
+
+const questionTypes: QuestionTypeConfig[] = [
   {
     type: PrismaQuestionType.TEXT,
     name: "Texto Corto",
     description: "Respuesta de una línea",
     icon: Type,
+    enabled: true,
   },
   {
     type: PrismaQuestionType.TEXTAREA,
     name: "Texto Largo",
     description: "Respuesta de múltiples líneas",
     icon: AlignLeft,
+    enabled: true,
   },
   {
     type: PrismaQuestionType.NUMBER,
     name: "Número",
     description: "Valor numérico",
     icon: Hash,
+    enabled: true,
   },
   {
     type: PrismaQuestionType.EMAIL,
     name: "Email",
     description: "Dirección de correo",
     icon: Mail,
+    enabled: true,
   },
   {
     type: PrismaQuestionType.PHONE,
     name: "Teléfono",
     description: "Número de teléfono",
     icon: Phone,
+    enabled: true,
   },
   {
     type: PrismaQuestionType.URL,
     name: "URL",
     description: "Enlace web",
     icon: LinkIcon,
+    enabled: true,
   },
   {
     type: PrismaQuestionType.DATE,
     name: "Fecha",
     description: "Selector de fecha",
     icon: Calendar,
+    enabled: true,
   },
   {
-    type: PrismaQuestionType.TIME, // Añadido
+    type: PrismaQuestionType.TIME,
     name: "Hora",
     description: "Selector de hora",
-    icon: Clock, // Cambiado el icono por uno más apropiado
+    icon: Clock,
+    enabled: true,
   },
   {
-    type: PrismaQuestionType.MULTIPLE_CHOICE, // Para radio buttons (selección única)
+    type: PrismaQuestionType.MULTIPLE_CHOICE,
     name: "Opción Única",
     description: "Una opción entre varias (radio)",
     icon: Circle,
+    enabled: true,
   },
   {
-    type: PrismaQuestionType.CHECKBOXES, // Para múltiples checkboxes
+    type: PrismaQuestionType.CHECKBOXES,
     name: "Casillas",
     description: "Múltiples opciones (checkboxes)",
-    icon: CheckSquare, // Icono más representativo de múltiples casillas
+    icon: CheckSquare,
+    enabled: true,
   },
   {
     type: PrismaQuestionType.DROPDOWN,
     name: "Desplegable",
     description: "Lista desplegable",
     icon: ChevronDown,
+    enabled: true,
   },
   {
-    type: PrismaQuestionType.SCALE, // Este tipo en Prisma abarca escalas numéricas y ratings con estrellas
-    name: "Escala/Calificación", // Nombre más genérico
+    type: PrismaQuestionType.SCALE,
+    name: "Escala/Calificación",
     description: "Valor en una escala numérica o estrellas",
-    icon: BarChart3, // O Star, dependiendo de cómo lo uses
+    icon: BarChart3,
+    enabled: true,
   },
   {
     type: PrismaQuestionType.MATRIX,
     name: "Matriz",
     description: "Pregunta de tipo matriz",
     icon: Grid,
+    enabled: false, // <-- DESHABILITADO
   },
   {
     type: PrismaQuestionType.FILE_UPLOAD,
     name: "Carga de Archivo",
     description: "Permitir carga de archivos",
     icon: Upload,
+    enabled: false, // <-- DESHABILITADO
   },
   {
     type: PrismaQuestionType.SIGNATURE,
     name: "Firma",
     description: "Campo de firma digital",
     icon: Signature,
+    enabled: false, // <-- DESHABILITADO
   },
 ]
 
@@ -134,7 +156,8 @@ export function QuestionTypeSelector({ onSelect, onCancel }: QuestionTypeSelecto
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {questionTypes.map((questionType) => {
+        {/* Filtrar los tipos de preguntas que están habilitados */}
+        {questionTypes.filter(qt => qt.enabled).map((questionType) => {
           const Icon = questionType.icon
           return (
             <Card
@@ -156,4 +179,3 @@ export function QuestionTypeSelector({ onSelect, onCancel }: QuestionTypeSelecto
     </div>
   )
 }
-// --- END OF FILE question-type-selector.tsx ---
