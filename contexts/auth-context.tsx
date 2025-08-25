@@ -25,6 +25,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean; // <-- ¡Nuevo!
   login: (credentials: { email: string; password: string }) => Promise<void>;
+  register: (data: { name: string; email: string; password: string }) => Promise<void>
   logout: () => Promise<void>;
 }
 
@@ -120,11 +121,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Calcula isAuthenticated basado en si el usuario existe
   const isAuthenticated = user !== null; // <-- ¡Nuevo!
 
+  const register = async (data: { name: string; email: string; password: string }) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error desconocido al registrar usuario');
+      }
+
+      const responseData = await response.json();
+      setUser(responseData.user);
+      console.log('Registro exitoso:', responseData.user);
+    } catch (error: any) {
+      console.error('Error en el registro:', error);
+      setUser(null);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const contextValue = {
     user,
     isLoading,
     isAuthenticated, // <-- ¡Añadir aquí!
     login,
+    register,
     logout,
   };
 

@@ -1,4 +1,5 @@
 import type { SurveyResponse, Question, Answer } from "@/types/survey"
+import { QuestionType } from "@prisma/client";
 import { surveyStore } from "./survey-store"
 
 export interface QuestionAnalytics {
@@ -125,7 +126,11 @@ export class AnalyticsService {
     question: Question,
     answers: Answer[],
   ): { average?: number; median?: number; mode?: string; min?: number; max?: number } | undefined {
-    if (question.type === "number" || question.type === "rating" || question.type === "scale") {
+    if (
+  question.type === QuestionType.NUMBER ||
+  question.type === QuestionType.RATING ||
+  question.type === QuestionType.SCALE
+    ) {
       const numericValues = answers
         .map((a) => Number(a.value))
         .filter((val) => !Number.isNaN(val))

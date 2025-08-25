@@ -183,4 +183,5 @@ enum QuestionType {
   MATRIX
   FILE_UPLOAD
   SIGNATURE
+  RATING
 }

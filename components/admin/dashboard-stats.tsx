@@ -35,7 +35,7 @@ export function DashboardStats() {
         const surveyResponses = responses.filter((r) => r.surveyId === survey.id).length
         return surveyResponses > 0 ? 100 : 0 // Simplificado para demo
       })
-      avgResponseRate = rates.reduce((a, b) => a + b, 0) / rates.length
+      avgResponseRate = rates.reduce((a: number, b: number) => a + b, 0) / rates.length
     }
 
     setStats({

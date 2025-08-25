@@ -54,7 +54,8 @@ export async function POST(request: Request) {
 
     // 6. Establecer el token como una cookie HTTP-only
     // Esto es más seguro que almacenar el token en el localStorage del cliente
-    cookies().set('token', token, {
+    const cookieStore = await cookies();
+    cookieStore.set('token', token, {
       httpOnly: true, // No accesible desde JavaScript del navegador
       secure: process.env.NODE_ENV === 'production', // Solo enviar en HTTPS en producción
       maxAge: 60 * 60 * 1, // 1 hora (debe coincidir con la expiración del token)
