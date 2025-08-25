@@ -7,7 +7,7 @@
     "node": "22.x"
   },
   "scripts": {
-    "build": "prisma generate && tsc",
+    "build": "prisma generate && tsc && next build",
     "dev": "next dev --turbopack",
     "lint": "next lint",
     "start": "next start",
