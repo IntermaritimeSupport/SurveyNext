@@ -232,7 +232,7 @@ export default function SurveysListPage() {
                                 <span className="sr-only">Editar encuesta</span>
                               </Button>
                             </Link>
-                            <Link href={`/dashboard/responses/${survey.id}`} passHref>
+                            <Link href={`/admin/responses/${survey.id}`} passHref>
                               <Button
                                 variant="ghost"
                                 size="sm"

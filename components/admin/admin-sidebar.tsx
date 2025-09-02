@@ -99,17 +99,6 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      {/* Quick Actions */}
-      <div className="border-t border-slate-200 p-4 space-y-2">
-        <Link href="/admin/surveys/create">
-          <Button className="w-full justify-start gap-3 bg-green-600 hover:bg-green-700">
-            <PlusCircle className="h-5 w-5" />
-            {t("createSurvey")}
-          </Button>
-        </Link>
-      </div>
-
-      {/* Footer */}
       <div className="border-t border-slate-200 p-4 space-y-2">
         <LanguageSelector />
         <Button
