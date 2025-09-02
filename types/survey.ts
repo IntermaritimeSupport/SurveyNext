@@ -107,3 +107,26 @@ export interface SurveyStats {
   averageTime: number
   lastResponse?: Date
 }
+
+// ... en SurveyManager.tsx
+export interface QuestionData {
+  id?: string;
+  title: string;
+  description: string;
+  type: string;
+  required: boolean;
+  order: number;
+  options: string[] | null; // <-- Esto es correcto. Puede ser un array de strings o null.
+  validation?: string | null;
+}
+
+// ...
+// Cuando añades una nueva pregunta:
+// {
+//   title: "",
+//   description: "",
+//   type: "TEXT",
+//   required: false,
+//   order: newOrder,
+//   options: null, // <-- Inicialización con null es compatible con string[] | null
+// },

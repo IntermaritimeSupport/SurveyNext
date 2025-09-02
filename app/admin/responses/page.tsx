@@ -18,6 +18,7 @@ import {
   QuestionType as PrismaQuestionType,
 } from "@prisma/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import Link from "next/link"
 
 // =========================================================================
 // INTERFACES
@@ -394,9 +395,9 @@ export default function ResponsesPage() {
                             </div>
 
                             <div className="flex space-x-2 ml-4">
-                              <Button variant="outline" size="sm" className="bg-transparent">
+                              <Link href={`/admin/responses/${response.id}`} className="bg-transparent">
                                 <Eye className="h-4 w-4" />
-                              </Button>
+                              </Link>
                             </div>
                           </div>
                         </CardContent>

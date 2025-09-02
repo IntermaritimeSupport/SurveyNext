@@ -1,6 +1,6 @@
 // app/api/surveys/route.ts
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, SurveyStatus } from '@prisma/client'
 const prisma = new PrismaClient()
 
 // GET /api/surveys - Obtener todas las encuestas
@@ -58,7 +58,8 @@ export async function POST(request: Request) {
       startDate,
       endDate,
       userId, // Necesitas un userId para relacionar la encuesta con un usuario
-      questions // Si quieres crear preguntas junto con la encuesta
+      questions, // Si quieres crear preguntas junto con la encuesta
+      isPublished
     } = body;
 
     // Validación básica de campos requeridos
@@ -74,15 +75,13 @@ export async function POST(request: Request) {
         description,
         customLink,
         isAnonymous: isAnonymous || false,
-        showProgress: showProgress || true,
+        showProgress: showProgress ?? true,
         allowMultipleResponses: allowMultipleResponses || false,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
         userId,
-        // Puedes establecer el status inicial a DRAFT por defecto si no se proporciona
-        // status: SurveyStatus.DRAFT,
+        status: isPublished ? SurveyStatus.PUBLISHED : SurveyStatus.DRAFT, // ✅ usar el valor del toggle
 
-        // Si se proporcionan preguntas, crearlas junto con la encuesta
         ...(questions && questions.length > 0 && {
           questions: {
             create: questions.map((q: any, index: number) => ({
@@ -90,7 +89,7 @@ export async function POST(request: Request) {
               description: q.description,
               type: q.type,
               required: q.required || false,
-              order: q.order !== undefined ? q.order : index, // Asignar un orden si no viene
+              order: q.order !== undefined ? q.order : index,
               options: q.options || null,
               validation: q.validation || null,
             })),
@@ -98,20 +97,21 @@ export async function POST(request: Request) {
         }),
       },
       include: {
-        user: {
-          select: { id: true, name: true },
-        },
-        questions: {
-          select: { id: true, title: true, type: true, order: true },
-        },
+        user: { select: { id: true, name: true } },
+        questions: { select: { id: true, title: true, type: true, order: true } },
       },
     });
+
 
     return NextResponse.json(newSurvey, { status: 201 });
   } catch (error: any) {
     console.error('Error creating survey:', error);
     if (error.code === 'P2002' && error.meta?.target?.includes('customLink')) {
       return NextResponse.json({ message: 'El enlace personalizado ya está en uso' }, { status: 409 });
+    }
+    // Added a more specific error for P2003 (Foreign Key Constraint Violation)
+    if (error.code === 'P2003' && error.meta?.field_name?.includes('userId')) {
+      return NextResponse.json({ message: 'El ID de usuario proporcionado no existe.' }, { status: 404 });
     }
     return NextResponse.json({ message: 'Error al crear la encuesta' }, { status: 500 });
   }

@@ -1,12 +1,12 @@
 "use client"
 
 import { AdminLayout } from "@/components/admin/admin-layout"
-import { SurveyBuilder } from "@/components/survey-builder/survey-builder"
+import SurveyManager from "@/components/survey-builder/survey-manager"
 
 export default function CreateSurveyPage() {
   return (
     <AdminLayout>
-      <SurveyBuilder />
+      <SurveyManager />
     </AdminLayout>
   )
 }

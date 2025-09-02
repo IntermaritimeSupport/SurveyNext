@@ -227,9 +227,9 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
           </RadioGroup>
         )
 
-      case PrismaQuestionType.SCALE:
+      case PrismaQuestionType.RATING:
         const min = question.validation?.min || 1
-        const max = question.validation?.max || 10
+        const max = question.validation?.max || 5
         return (
           <div className="space-y-4">
             <div className="flex items-center justify-between text-sm text-slate-600">
@@ -257,7 +257,36 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
             {localValue && <div className="text-center text-sm text-slate-600">Seleccionado: {localValue}</div>}
           </div>
         )
-
+      case PrismaQuestionType.SCALE:
+        const min2 = question.validation?.min || 1
+        const max2 = question.validation?.max || 10
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-sm text-slate-600">
+              <span>{min2}</span>
+              <span>{max2}</span>
+            </div>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {Array.from({ length: max2 - min2 + 1 }, (_, i) => {
+                const val = min2 + i
+                const isSelected = localValue === val
+                return (
+                  <Button
+                    key={i}
+                    type="button"
+                    variant={isSelected ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleValueChange(val)}
+                    className="w-12 h-12"
+                  >
+                    {val}
+                  </Button>
+                )
+              })}
+            </div>
+            {localValue && <div className="text-center text-sm text-slate-600">Seleccionado: {localValue}</div>}
+          </div>
+        )
       case PrismaQuestionType.FILE_UPLOAD:
         return (
           <div>

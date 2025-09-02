@@ -1,7 +1,7 @@
 "use client"
 
 import { AdminLayout } from "@/components/admin/admin-layout"
-import { SurveyBuilder } from "@/components/survey-builder/survey-builder"
+import SurveyManager from "@/components/survey-builder/survey-manager"
 
 interface EditSurveyPageProps {
   params: {
@@ -12,7 +12,7 @@ interface EditSurveyPageProps {
 export default function EditSurveyPage({ params }: EditSurveyPageProps) {
   return (
     <AdminLayout>
-      <SurveyBuilder surveyId={params.id} />
+      <SurveyManager />
     </AdminLayout>
   )
 }

@@ -130,6 +130,8 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
           return "Selecciona al menos una opción"
         }
         break
+
+        
     }
 
     return null
