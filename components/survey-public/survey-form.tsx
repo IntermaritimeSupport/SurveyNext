@@ -1,21 +1,19 @@
-// --- START OF FILE survey-form.tsx ---
-
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { QuestionRenderer } from "./question-renderer"
-import { ProgressBar } from "./progress-bar"
-import { ChevronLeft, ChevronRight, Send, CheckCircle, Loader2 } from "lucide-react"
+import React, { useState, useCallback, useMemo } from 'react';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { QuestionRenderer } from "./question-renderer";
+import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ProgressBar } from "./progress-bar";
 
-// Importar los tipos de Prisma directamente y las interfaces públicas que definiste
-import { QuestionType as PrismaQuestionType } from '@prisma/client';
+import { QuestionType as PrismaQuestionType, SurveyStatus } from '@prisma/client';
+import { CheckCircle, ChevronLeft, ChevronRight, Loader2, Send } from 'lucide-react';
+import { QuestionOption } from '../SurveyManager'; // ✅ Importar QuestionOption desde SurveyManager
 
-// Re-usar las interfaces que definiste en SurveyPublicPage
 interface PublicSurvey {
   id: string;
   title: string;
@@ -23,6 +21,9 @@ interface PublicSurvey {
   isAnonymous: boolean;
   showProgress: boolean;
   allowMultipleResponses: boolean;
+  status: SurveyStatus;
+  startDate?: string;
+  endDate?: string;
 }
 
 interface PublicQuestion {
@@ -32,11 +33,11 @@ interface PublicQuestion {
   type: PrismaQuestionType;
   required: boolean;
   order: number;
-  options: any | null;
-  validation: any | null;
+  options: QuestionOption[] | null;
+  validation: Record<string, any> | null;
 }
 
-interface AnswerForApi {
+interface Answer {
   questionId: string;
   value: any;
 }
@@ -47,24 +48,31 @@ interface SurveyFormProps {
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
-const QUESTIONS_PER_PAGE = 10; // Define cuántas preguntas por "paso"
+const DEFAULT_QUESTIONS_PER_PAGE = 10; // ✅ Nuevo valor: paginación por defecto si hay muchas preguntas
+const PAGINATION_THRESHOLD = 5; // ✅ Si hay más de X preguntas, activamos la paginación
 
 
 export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormProps) {
-  const [currentPageIndex, setCurrentPageIndex] = useState(0)
-  const [answers, setAnswers] = useState<Record<string, AnswerForApi>>({})
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [respondentEmail, setRespondentEmail] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isCompleted, setIsCompleted] = useState(false)
+  const router = useRouter();
+  const [currentAnswers, setCurrentAnswers] = useState<Map<string, any>>(() => new Map());
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Map<string, string>>(() => new Map());
+  const [respondentEmail, setRespondentEmail] = useState("");
+  const [isCompleted, setIsCompleted] = useState(false);
   
   const isEmailRequired = !survey.isAnonymous;
-
   const [isShowingEmailStep, setIsShowingEmailStep] = useState(isEmailRequired);
 
-  const sortedQuestions = initialQuestions.sort((a, b) => a.order - b.order)
+  const sortedQuestions = useMemo(() => initialQuestions.sort((a, b) => a.order - b.order), [initialQuestions]);
 
-  const totalQuestionPages = Math.ceil(sortedQuestions.length / QUESTIONS_PER_PAGE);
+  // ✅ Lógica de paginación condicional
+  const enablePagination = sortedQuestions.length > PAGINATION_THRESHOLD;
+  const questionsPerPage = enablePagination ? DEFAULT_QUESTIONS_PER_PAGE : sortedQuestions.length;
+
+
+  const totalQuestionPages = Math.ceil(sortedQuestions.length / questionsPerPage);
   const totalSteps = totalQuestionPages + (isEmailRequired ? 1 : 0);
   
   let currentStep = 0;
@@ -74,104 +82,178 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
     currentStep = currentPageIndex + 1 + (isEmailRequired ? 1 : 0);
   }
 
-  const startIndex = currentPageIndex * QUESTIONS_PER_PAGE;
-  const endIndex = Math.min(startIndex + QUESTIONS_PER_PAGE, sortedQuestions.length);
+  const startIndex = currentPageIndex * questionsPerPage;
+  const endIndex = Math.min(startIndex + questionsPerPage, sortedQuestions.length);
   const currentQuestionsBlock = sortedQuestions.slice(startIndex, endIndex);
 
   const isLastQuestionPage = currentPageIndex === totalQuestionPages - 1;
 
 
-  const validateAnswer = (question: PublicQuestion, answer?: AnswerForApi): string | null => {
-    if (question.type === PrismaQuestionType.FILE_UPLOAD && question.required) {
-      if (!answer || answer.value === null || typeof answer.value !== 'object' || !answer.value.fileName) {
-        return "Debe adjuntar un archivo";
-      }
-    } else if (question.required && (!answer || answer.value === null || answer.value === undefined || (typeof answer.value === 'string' && answer.value.trim() === '') || (Array.isArray(answer.value) && answer.value.length === 0))) {
-      return "Esta pregunta es obligatoria"
+  const validateAnswer = (question: PublicQuestion, answerValue: any): string | null => {
+    const isAnswerEmpty = answerValue === undefined || answerValue === null ||
+          (typeof answerValue === 'string' && answerValue.trim() === '') ||
+          (Array.isArray(answerValue) && answerValue.length === 0) ||
+          (typeof answerValue === 'object' && answerValue !== null && Object.keys(answerValue).length === 0 && question.type !== PrismaQuestionType.FILE_UPLOAD);
+          
+    if (question.required && isAnswerEmpty) {
+      return "Esta pregunta es obligatoria.";
     }
 
-    if (!answer || answer.value === null || answer.value === undefined || (typeof answer.value === 'string' && answer.value.trim() === '')) return null
-
-    const value = answer.value
-
+    if (!question.required && isAnswerEmpty) {
+        return null;
+    }
+    
     switch (question.type) {
       case PrismaQuestionType.EMAIL:
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        if (typeof value === "string" && !emailRegex.test(value)) {
-          return "Ingresa un email válido"
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (typeof answerValue === "string" && !emailRegex.test(answerValue)) {
+          return "Ingresa un email válido.";
         }
-        break
+        break;
 
       case PrismaQuestionType.TEXT:
       case PrismaQuestionType.TEXTAREA:
-        if (typeof value === "string") {
-          if (question.validation?.minLength && value.length < question.validation.minLength) {
-            return `Mínimo ${question.validation.minLength} caracteres`
+        if (typeof answerValue === "string") {
+          if (question.validation?.minLength && answerValue.length < question.validation.minLength) {
+            return `Mínimo ${question.validation.minLength} caracteres.`;
           }
-          if (question.validation?.maxLength && value.length > question.validation.maxLength) {
-            return `Máximo ${question.validation.maxLength} caracteres`
+          if (question.validation?.maxLength && answerValue.length > question.validation.maxLength) {
+            return `Máximo ${question.validation.maxLength} caracteres.`;
           }
         }
-        break
+        break;
 
       case PrismaQuestionType.NUMBER:
-        if (typeof value === "number") {
-          if (question.validation?.min && value < question.validation.min) {
-            return `El valor mínimo es ${question.validation.min}`
-          }
-          if (question.validation?.max && value > question.validation.max) {
-            return `El valor máximo es ${question.validation.max}`
-          }
+        const numValue = Number(answerValue);
+        if (isNaN(numValue)) {
+            return "Debe ser un número válido.";
         }
-        break
+        if (question.validation?.min && numValue < question.validation.min) {
+            return `El valor mínimo es ${question.validation.min}.`;
+        }
+        if (question.validation?.max && numValue > question.validation.max) {
+            return `El valor máximo es ${question.validation.max}.`;
+        }
+        break;
+      
+      case PrismaQuestionType.URL:
+        const urlRegex = /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/[a-zA-Z0-9]+\.[^\s]{2,}|[a-zA-Z0-9]+\.[^\s]{2,})$/i;
+        if (typeof answerValue === "string" && !urlRegex.test(answerValue)) {
+          return "Ingresa una URL válida.";
+        }
+        break;
+      
+      case PrismaQuestionType.PHONE:
+        const phoneRegex = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im;
+        if (typeof answerValue === "string" && !phoneRegex.test(answerValue)) {
+          return "Ingresa un número de teléfono válido.";
+        }
+        break;
+
+      case PrismaQuestionType.DATE:
+        if (typeof answerValue === 'string' && !/^\d{4}-\d{2}-\d{2}$/.test(answerValue)) {
+          return `Formato de fecha inválido (YYYY-MM-DD).`;
+        }
+        if (typeof answerValue === 'string' && isNaN(new Date(answerValue).getTime())) {
+            return `Formato de fecha inválido.`;
+        }
+        break;
+
+      case PrismaQuestionType.TIME:
+        if (typeof answerValue === 'string' && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(answerValue)) {
+            return `Formato de hora inválido (HH:mm).`;
+        }
+        break;
+
+      case PrismaQuestionType.MULTIPLE_CHOICE:
+      case PrismaQuestionType.DROPDOWN:
+        const dropdownOptions = (question.options as QuestionOption[] | null) || [];
+        if (!dropdownOptions.some(opt => opt.value === answerValue)) {
+            return "La opción seleccionada es inválida.";
+        }
+        break;
 
       case PrismaQuestionType.CHECKBOXES:
-        if (Array.isArray(value) && value.length === 0 && question.required) {
-          return "Selecciona al menos una opción"
+        const checkboxOptions = (question.options as QuestionOption[] | null) || [];
+        if (!Array.isArray(answerValue)) {
+            return "Debe seleccionar una o más opciones.";
         }
-        break
+        const validCheckboxValues = checkboxOptions.map(opt => opt.value);
+        if (!answerValue.every((val: any) => validCheckboxValues.includes(val))) {
+            return "Una o más opciones seleccionadas son inválidas.";
+        }
+        break;
+      
+      case PrismaQuestionType.RATING:
+      case PrismaQuestionType.SCALE:
+        const ratingScaleValue = Number(answerValue);
+        if (isNaN(ratingScaleValue)) {
+            return "Debe ser un número válido.";
+        }
+        const minVal = question.validation?.min || 1;
+        const maxVal = question.validation?.max || (question.type === PrismaQuestionType.RATING ? 5 : 10);
+        if (ratingScaleValue < minVal || ratingScaleValue > maxVal) {
+            return `Debe estar entre ${minVal} y ${maxVal}.`;
+        }
+        break;
 
-        
+      case PrismaQuestionType.FILE_UPLOAD:
+        if (typeof answerValue !== 'object' || answerValue === null || !answerValue.fileName || !answerValue.fileUrl) {
+            return "Debe adjuntar un archivo válido.";
+        }
+        break;
+      
+      case PrismaQuestionType.SIGNATURE:
+        if (typeof answerValue !== 'string' || answerValue.length < 10) {
+            return "La firma es inválida.";
+        }
+        break;
+
+      case PrismaQuestionType.MATRIX:
+        if (typeof answerValue !== 'object' || answerValue === null || Array.isArray(answerValue) || Object.keys(answerValue).length === 0) {
+            return "Formato de respuesta de matriz inválido.";
+        }
+        break;
+
     }
 
-    return null
-  }
+    return null;
+  };
 
-  const handleAnswerChange = (questionId: string, value: any) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: { questionId, value },
-    }))
-
-    if (errors[questionId]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev }
-        delete newErrors[questionId]
-        return newErrors
-      })
-    }
-  }
+  const handleAnswerChange = useCallback((questionId: string, value: any) => {
+    setCurrentAnswers(prev => {
+      const newMap = new Map(prev);
+      newMap.set(questionId, value);
+      return newMap;
+    });
+    setValidationErrors(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(questionId);
+        return newMap;
+    });
+  }, []);
 
   const validateEmailInput = (email: string): string | null => {
     if (isEmailRequired && !email.trim()) {
-      return "El email es obligatorio";
+      return "El email es obligatorio.";
     }
     if (email.trim()) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        return "Ingresa un email válido";
+        return "Ingresa un email válido.";
       }
     }
     return null;
   };
 
   const handleNext = () => {
-    setErrors({});
+    setValidationErrors(new Map());
+    setSubmissionError(null);
 
     if (isShowingEmailStep) {
       const emailError = validateEmailInput(respondentEmail);
       if (emailError) {
-        setErrors({ email: emailError });
+        setValidationErrors(prev => new Map(prev).set('email', emailError));
         return;
       }
       setIsShowingEmailStep(false);
@@ -179,66 +261,94 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
       return;
     }
 
-    let hasBlockErrors = false;
-    const newErrors: Record<string, string> = {};
+    let hasPageErrors = false;
+    const newPageErrors = new Map<string, string>();
     currentQuestionsBlock.forEach(q => {
-        const error = validateAnswer(q, answers[q.id]);
+        const answerValue = currentAnswers.get(q.id);
+        const error = validateAnswer(q, answerValue);
         if (error) {
-            newErrors[q.id] = error;
-            hasBlockErrors = true;
+            newPageErrors.set(q.id, error);
+            hasPageErrors = true;
         }
     });
 
-    if (hasBlockErrors) {
-        setErrors(newErrors);
+    if (hasPageErrors) {
+        setValidationErrors(newPageErrors);
+        setSubmissionError("Por favor, corrige los errores en las preguntas obligatorias.");
         return;
     }
 
-    if (isLastQuestionPage) {
-       handleSubmit();
+    // ✅ Lógica de paginación condicional
+    if (enablePagination && !isLastQuestionPage) {
+        setCurrentPageIndex((prev) => prev + 1);
     } else {
-      setCurrentPageIndex((prev) => prev + 1);
+        handleSubmit(); // Si no hay paginación o es la última página, enviar
     }
-  }
+  };
 
   const handlePrevious = () => {
+    setValidationErrors(new Map());
+    setSubmissionError(null);
+
     if (isShowingEmailStep) {
-        return; // No hay "Anterior" si estamos en el primer paso (email)
+        return;
     }
 
-    if (currentPageIndex === 0 && isEmailRequired) {
+    // ✅ Lógica de paginación condicional
+    if (enablePagination && currentPageIndex === 0 && isEmailRequired) {
         setIsShowingEmailStep(true);
-        setErrors({});
         return;
     }
     
-    if (currentPageIndex > 0) {
+    if (enablePagination && currentPageIndex > 0) {
       setCurrentPageIndex((prev) => prev - 1)
     }
-  }
+    // Si no hay paginación, el botón "Anterior" no debería ser visible o debería hacer algo diferente.
+    // Esto ya se maneja con el disabled prop en el botón.
+  };
 
   const handleSubmit = async () => {
     const emailError = validateEmailInput(respondentEmail);
     if (emailError) {
-      setErrors({ email: emailError });
+      setValidationErrors(prev => new Map(prev).set('email', emailError));
+      setSubmissionError("Por favor, corrige los errores en la información de contacto.");
       return;
     }
-    setErrors({});
 
-    setIsSubmitting(true);
+    let hasFinalErrors = false;
+    const finalErrors = new Map<string, string>();
+    sortedQuestions.forEach(q => {
+        const answerValue = currentAnswers.get(q.id);
+        const error = validateAnswer(q, answerValue);
+        if (error) {
+            finalErrors.set(q.id, error);
+            hasFinalErrors = true;
+        }
+    });
+
+    if (hasFinalErrors) {
+        setValidationErrors(finalErrors);
+        setSubmissionError("Por favor, corrige los errores en las preguntas antes de enviar.");
+        return;
+    }
+
+    setIsLoading(true);
+    setSubmissionError(null);
+
+    const answersForApi: Answer[] = sortedQuestions.map(q => ({
+      questionId: q.id,
+      value: currentAnswers.has(q.id) ? (currentAnswers.get(q.id) ?? null) : null,
+    }));
 
     try {
-      const answersForApi: AnswerForApi[] = Object.values(answers).map(answer => ({
-        questionId: answer.questionId,
-        value: answer.value
-      }));
-
       const responseData = {
         surveyId: survey.id,
         email: isEmailRequired ? respondentEmail : null,
         answers: answersForApi,
         isComplete: true,
       };
+      console.log("SurveyForm: Sending response data to API:", responseData);
+
 
       const apiResponse = await fetch(`${API_BASE_URL}/api/surveys/${survey.id}/responses`, {
         method: 'POST',
@@ -250,16 +360,16 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
       if (!apiResponse.ok) {
         const errorData = await apiResponse.json();
-        throw new Error(errorData.message || 'Error desconocido al enviar la encuesta');
+        throw new Error(errorData.message || 'Error desconocido al enviar la encuesta.');
       }
 
       setIsCompleted(true);
 
     } catch (error: any) {
-      console.error("Error submitting survey:", error);
-      setErrors({ submit: error.message || "Error al enviar la encuesta. Inténtalo de nuevo." });
+      console.error("SurveyForm: Error submitting survey:", error);
+      setSubmissionError(error.message || "Error al enviar la encuesta. Inténtalo de nuevo.");
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
@@ -280,7 +390,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                 <br />
                 <strong>Completada:</strong> {new Date().toLocaleString()}
                 <br />
-                <strong>Preguntas respondidas:</strong> {Object.keys(answers).length}
+                <strong>Preguntas respondidas:</strong> {Object.keys(currentAnswers).length}
               </p>
             </div>
             <Button onClick={() => window.location.href = '/'} variant="outline" className="w-full bg-transparent">
@@ -313,7 +423,6 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
         <Card className="survey-card">
           <CardContent className="p-8">
-            {/* --- RENDERIZADO CONDICIONAL: Email o Preguntas del Bloque --- */}
             {isShowingEmailStep ? (
               <div className="space-y-6">
                 <div>
@@ -334,18 +443,16 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                     value={respondentEmail}
                     onChange={(e) => {
                       setRespondentEmail(e.target.value)
-                      if (errors.email) {
-                        setErrors((prev) => {
-                          const newErrors = { ...prev }
-                          delete newErrors.email
-                          return newErrors
-                        })
-                      }
+                      setValidationErrors(prev => {
+                          const newErrors = new Map(prev);
+                          newErrors.delete('email');
+                          return newErrors;
+                      });
                     }}
                     placeholder="tu@email.com"
-                    className={errors.email ? "border-red-300" : ""}
+                    className={validationErrors.has('email') ? "border-red-300" : ""}
                   />
-                  {errors.email && <p className="text-sm text-red-600 mt-1">{errors.email}</p>}
+                  {validationErrors.get('email') && <p className="text-sm text-red-600 mt-1">{validationErrors.get('email')}</p>}
                 </div>
               </div>
             ) : (
@@ -356,9 +463,9 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                     <QuestionRenderer
                       key={question.id}
                       question={question}
-                      answer={answers[question.id]}
+                      answer={{ questionId: question.id, value: currentAnswers.get(question.id) }}
                       onAnswerChange={(value) => handleAnswerChange(question.id, value)}
-                      error={errors[question.id]}
+                      error={validationErrors.get(question.id)}
                     />
                   ))}
                 </div>
@@ -368,11 +475,10 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                   </Alert>
               )
             )}
-            {/* --- FIN RENDERIZADO CONDICIONAL --- */}
 
-            {errors.submit && (
+            {submissionError && (
               <Alert variant="destructive" className="mt-4">
-                <AlertDescription>{errors.submit}</AlertDescription>
+                <AlertDescription>{submissionError}</AlertDescription>
               </Alert>
             )}
           </CardContent>
@@ -383,7 +489,8 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
           <Button
             variant="outline"
             onClick={handlePrevious}
-            disabled={isShowingEmailStep || (!isEmailRequired && currentPageIndex === 0)}
+            // ✅ CORRECCIÓN: Deshabilitar "Anterior" si no hay paginación y estamos en la primera pregunta
+            disabled={isShowingEmailStep || (!enablePagination && currentPageIndex === 0)}
             className="bg-transparent"
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
@@ -398,12 +505,12 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
             )}
           </div>
 
-          <Button onClick={handleNext} disabled={isSubmitting}>
-            {isSubmitting ? (
+          <Button onClick={handleNext} disabled={isLoading}>
+            {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...
               </>
-            ) : (isLastQuestionPage && !isShowingEmailStep) ? (
+            ) : (!enablePagination || (isLastQuestionPage && !isShowingEmailStep)) ? ( // ✅ CORRECCIÓN: Mostrar "Enviar" si no hay paginación O si es la última página
               <>
                 <Send className="h-4 w-4 mr-2" />
                 Enviar

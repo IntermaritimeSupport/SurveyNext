@@ -3,19 +3,6 @@ import { NextResponse } from 'next/server';
 import { PrismaClient, QuestionType, SurveyStatus } from '@prisma/client'
 const prisma = new PrismaClient()
 
-// Interfaz para el cuerpo de la solicitud POST
-interface AnswerInput {
-  questionId: string;
-  value: any; // El valor de la respuesta, puede ser string, number, array, object, etc.
-}
-
-interface PostResponseBody {
-  email?: string;
-  userId?: string;
-  answers: AnswerInput[];
-  isComplete?: boolean;
-}
-
 interface QuestionOption {
   value: string;
   label: string;
@@ -38,23 +25,19 @@ const sanitizeOptions = (options: any): QuestionOption[] | null => {
     return null;
   }
   return options.map((opt: any) => {
-    // Si ya es un objeto con value y label, o si es una string simple (caso de datos antiguos)
     if (typeof opt === 'object' && opt !== null && typeof opt.value === 'string' && typeof opt.label === 'string') {
       return { value: opt.value, label: opt.label };
     } 
-    // Si por alguna razón se guardó una string simple directamente en el array (formato antiguo)
     if (typeof opt === 'string') {
       return { value: opt, label: opt };
     }
-    // Si es un formato inesperado, devuelve un objeto vacío o null
     return { value: '', label: '' }; 
-  }).filter((opt: QuestionOption) => opt.value !== ''); // Filtra cualquier opción vacía resultante
+  }).filter((opt: QuestionOption) => opt.value !== '');
 };
 
-export async function GET(request: Request, { params }: { params: { surveyId: string } }) {
-  // --- SOLUCIÓN: Usar await params para silenciar la advertencia ---
-  const { surveyId } = await params;
-  // --- FIN SOLUCIÓN ---
+export async function GET(request: Request, { params }: { params: { surveyId: string | Promise<string> } }) {
+  const resolvedParams = await params;
+  const surveyId: string = resolvedParams.surveyId as string;
 
   try {
     const responses = await prisma.surveyResponse.findMany({
@@ -88,28 +71,17 @@ export async function GET(request: Request, { params }: { params: { surveyId: st
         ...answer,
         question: {
           ...answer.question,
-          options: typeof answer.question.options === 'string'
-            ? JSON.parse(answer.question.options)
-            : answer.question.options,
+          options: sanitizeOptions(answer.question.options),
         },
       })),
     }));
 
     return NextResponse.json(processedResponses, { status: 200 });
   } catch (error) {
-    console.error(`Error al obtener las respuestas para la encuesta ${surveyId}:`, error);
+    console.error(`API /surveys/[surveyId]/responses GET: Error al obtener las respuestas para la encuesta ${surveyId}:`, error);
     return NextResponse.json({ message: 'Error interno del servidor al obtener las respuestas de la encuesta.' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
-
-// =========================================================================
-// POST /api/surveys/[surveyId]/responses - Crear una nueva respuesta para una encuesta específica
-// Este endpoint es clave para cuando un usuario envía una encuesta
-// =========================================================================
-// app/api/surveys/[surveyId]/responses/route.ts
-// ... (imports y GET route)
 
 export async function POST(request: Request, { params }: { params: { surveyId: string | Promise<string> } }) {
   const resolvedParams = await params;
@@ -140,6 +112,7 @@ export async function POST(request: Request, { params }: { params: { surveyId: s
       return NextResponse.json({ message: 'Esta encuesta no está activa para recibir respuestas.' }, { status: 403 });
     }
 
+    // Validación para múltiples respuestas si la encuesta no lo permite y el usuario está identificado
     if (!survey.allowMultipleResponses && clientUserId && !survey.isAnonymous) {
       const existingResponse = await prisma.surveyResponse.findFirst({
         where: { surveyId, userId: clientUserId }
@@ -149,105 +122,134 @@ export async function POST(request: Request, { params }: { params: { surveyId: s
       }
     }
 
+    // Mapa de preguntas para facilitar la validación, con opciones saneadas
     const questionMap = new Map(
       survey.questions.map(q => [q.id, {
         ...q,
-        options: sanitizeOptions(q.options) // ✅ CORRECCIÓN 1: Sanea las opciones aquí
+        options: sanitizeOptions(q.options) // ✅ Sanea las opciones de las preguntas al cargar
       }])
     );
     const answersToCreate: AnswerInput[] = [];
 
+    // --- Iterar y validar cada respuesta ---
     for (const answer of answers) {
       const question = questionMap.get(answer.questionId);
 
       if (!question) {
-        return NextResponse.json({ message: `Pregunta con ID '${answer.questionId}' no encontrada en la encuesta.` }, { status: 400 });
+        // Si el frontend envía una respuesta para una pregunta que no existe, la ignoramos.
+        console.warn(`API POST /responses: Pregunta con ID '${answer.questionId}' no encontrada en la encuesta. Ignorando respuesta.`);
+        continue; 
       }
 
       let processedValue: any = answer.value;
+      // Normalizar 'undefined' a 'null' al principio para todas las respuestas
       if (processedValue === undefined) {
-          processedValue = null;
+          processedValue = null; 
       }
 
-      // ✅ CORRECCIÓN 2: questionOptions ya viene saneado
       const questionOptions = (question.options as QuestionOption[] | null); 
       const questionValidation = (question.validation as Record<string, any> | null);
 
-      if (question.required) {
-        if (processedValue === null || 
+      // --- 1. Determinar si la respuesta está "vacía" ---
+      const isAnswerEmpty = processedValue === null || 
             (typeof processedValue === 'string' && processedValue.trim() === '') ||
             (Array.isArray(processedValue) && processedValue.length === 0) ||
-            (typeof processedValue === 'object' && processedValue !== null && Object.keys(processedValue).length === 0 && question.type !== QuestionType.FILE_UPLOAD)
-           ) {
+            (typeof processedValue === 'object' && processedValue !== null && Object.keys(processedValue).length === 0 && question.type !== QuestionType.FILE_UPLOAD);
+            
+      // --- 2. Validar preguntas REQUERIDAS ---
+      if (question.required && isAnswerEmpty) {
           return NextResponse.json({ message: `La pregunta '${question.title}' es requerida y no fue respondida.` }, { status: 400 });
-        }
+      }
+      
+      // --- 3. Si la pregunta NO es requerida Y la respuesta está vacía, guardamos null y CONTINUAMOS ---
+      if (!question.required && isAnswerEmpty) {
+          answersToCreate.push({
+            questionId: answer.questionId,
+            value: null, // Guardar explícitamente como null para respuestas vacías no requeridas
+          });
+          continue; 
       }
 
+      // --- 4. Si hay un valor (no nulo/vacío), aplicar validaciones de formato ---
       switch (question.type) {
         case QuestionType.TEXT:
         case QuestionType.TEXTAREA:
         case QuestionType.URL:
         case QuestionType.PHONE:
         case QuestionType.EMAIL:
-          if (processedValue !== null && typeof processedValue !== 'string') {
+          if (typeof processedValue !== 'string') {
             return NextResponse.json({ message: `La respuesta para '${question.title}' debe ser texto. (Tipo recibido: ${typeof processedValue})` }, { status: 400 });
           }
-          if (question.type === QuestionType.EMAIL && processedValue !== null) {
+          if (question.type === QuestionType.EMAIL) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(processedValue)) {
               return NextResponse.json({ message: `El formato de email para '${question.title}' es inválido.` }, { status: 400 });
             }
           }
-          if (questionValidation?.maxLength && processedValue !== null && processedValue.length > questionValidation.maxLength) {
+          if (questionValidation?.maxLength && processedValue.length > questionValidation.maxLength) {
             return NextResponse.json({ message: `La respuesta para '${question.title}' excede el límite de ${questionValidation.maxLength} caracteres.` }, { status: 400 });
           }
-          if (questionValidation?.minLength && processedValue !== null && processedValue.length < questionValidation.minLength) {
+          if (questionValidation?.minLength && processedValue.length < questionValidation.minLength) {
             return NextResponse.json({ message: `La respuesta para '${question.title}' requiere al menos ${questionValidation.minLength} caracteres.` }, { status: 400 });
           }
-          if (questionValidation?.pattern && processedValue !== null && !new RegExp(questionValidation.pattern).test(processedValue)) {
+          if (questionValidation?.pattern && !new RegExp(questionValidation.pattern).test(processedValue)) {
             return NextResponse.json({ message: `La respuesta para '${question.title}' no coincide con el patrón requerido.` }, { status: 400 });
           }
           break;
 
         case QuestionType.NUMBER:
-          if (processedValue !== null) {
-              processedValue = Number(processedValue);
-              if (typeof processedValue !== 'number' || isNaN(processedValue)) {
-                return NextResponse.json({ message: `La respuesta para '${question.title}' debe ser un número válido.` }, { status: 400 });
-              }
-              if (questionValidation?.min !== undefined && processedValue < questionValidation.min) {
-                return NextResponse.json({ message: `La respuesta para '${question.title}' debe ser al menos ${questionValidation.min}.` }, { status: 400 });
-              }
-              if (questionValidation?.max !== undefined && processedValue > questionValidation.max) {
-                return NextResponse.json({ message: `La respuesta para '${question.title}' no debe exceder ${questionValidation.max}.` }, { status: 400 });
-              }
+          processedValue = Number(processedValue); // Intenta convertir a número
+          if (typeof processedValue !== 'number' || isNaN(processedValue)) {
+            return NextResponse.json({ message: `La respuesta para '${question.title}' debe ser un número válido.` }, { status: 400 });
+          }
+          if (questionValidation?.min !== undefined && processedValue < questionValidation.min) {
+            return NextResponse.json({ message: `La respuesta para '${question.title}' debe ser al menos ${questionValidation.min}.` }, { status: 400 });
+          }
+          if (questionValidation?.max !== undefined && processedValue > questionValidation.max) {
+            return NextResponse.json({ message: `La respuesta para '${question.title}' no debe exceder ${questionValidation.max}.` }, { status: 400 });
           }
           break;
 
         case QuestionType.DATE:
+          if (typeof processedValue !== 'string') {
+            return NextResponse.json({ message: `La respuesta para '${question.title}' (fecha) debe ser una cadena de texto.` }, { status: 400 });
+          }
+          const dateRegex = /^\d{4}-\d{2}-\d{2}$/; // Formato YYYY-MM-DD
+          if (!dateRegex.test(processedValue)) {
+            return NextResponse.json({ message: `La respuesta para '${question.title}' (fecha) debe ser un formato YYYY-MM-DD válido.` }, { status: 400 });
+          }
+          if (isNaN(new Date(processedValue).getTime())) {
+              return NextResponse.json({ message: `La respuesta para '${question.title}' (fecha) es una fecha inválida.` }, { status: 400 });
+          }
+          break;
+
         case QuestionType.TIME:
-          if (processedValue !== null && (typeof processedValue !== 'string' || !Date.parse(processedValue))) {
-            return NextResponse.json({ message: `La respuesta para '${question.title}' debe ser un formato de fecha/hora válido.` }, { status: 400 });
+          if (typeof processedValue !== 'string') {
+            return NextResponse.json({ message: `La respuesta para '${question.title}' (hora) debe ser una cadena de texto.` }, { status: 400 });
+          }
+          const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/; // Formato HH:mm (24 horas)
+          if (!timeRegex.test(processedValue)) {
+            return NextResponse.json({ message: `La respuesta para '${question.title}' (hora) debe ser un formato HH:mm válido.` }, { status: 400 });
           }
           break;
 
         case QuestionType.MULTIPLE_CHOICE:
         case QuestionType.DROPDOWN:
-          if (processedValue !== null && (!questionOptions || !Array.isArray(questionOptions) || !questionOptions.some(opt => opt.value === processedValue))) { // ✅ Validar contra opt.value
+          if (!questionOptions || !Array.isArray(questionOptions) || !questionOptions.some(opt => opt.value === processedValue)) {
             console.log(`DEBUG (Validation Failure): processedValue='${processedValue}' not found in questionOptions (values):`, questionOptions?.map(o => o.value));
             return NextResponse.json({ message: `La opción seleccionada para '${question.title}' es inválida.` }, { status: 400 });
           }
           break;
 
         case QuestionType.CHECKBOXES:
-          if (processedValue !== null && !Array.isArray(processedValue)) {
+          if (!Array.isArray(processedValue)) {
             return NextResponse.json({ message: `La respuesta para '${question.title}' debe ser un array de opciones.` }, { status: 400 });
           }
-          if (processedValue !== null && (!questionOptions || !Array.isArray(questionOptions))) {
+          if (!questionOptions || !Array.isArray(questionOptions)) {
              return NextResponse.json({ message: `Las opciones de configuración para '${question.title}' son inválidas.` }, { status: 500 });
           }
-          const validCheckboxValues = questionOptions!.map(opt => opt.value); // Extraer los valores válidos
-          if (processedValue !== null && !processedValue.every((val: any) => validCheckboxValues.includes(val))) {
+          const validCheckboxValues = questionOptions.map(opt => opt.value);
+          if (!processedValue.every((val: any) => validCheckboxValues.includes(val))) {
             console.log(`DEBUG (Validation Failure): processedValue values [${processedValue}] not all found in validOptionValues:`, validCheckboxValues);
             return NextResponse.json({ message: `Una o más opciones seleccionadas para '${question.title}' son inválidas.` }, { status: 400 });
           }
@@ -255,31 +257,30 @@ export async function POST(request: Request, { params }: { params: { surveyId: s
 
         case QuestionType.SCALE:
         case QuestionType.RATING:
-          if (processedValue !== null) {
-            processedValue = Number(processedValue);
-            if (typeof processedValue !== 'number' || isNaN(processedValue)) {
-              return NextResponse.json({ message: `La respuesta para '${question.title}' debe ser un número válido.` }, { status: 400 });
-            }
-            const scaleMin = questionValidation?.min || 1;
-            const scaleMax = questionValidation?.max || 10;
-            if (processedValue < scaleMin || processedValue > scaleMax) {
-              return NextResponse.json({ message: `La respuesta para '${question.title}' debe estar entre ${scaleMin} y ${scaleMax}.` }, { status: 400 });
-            }
+          processedValue = Number(processedValue);
+          if (typeof processedValue !== 'number' || isNaN(processedValue)) {
+            return NextResponse.json({ message: `La respuesta para '${question.title}' debe ser un número válido.` }, { status: 400 });
+          }
+          const scaleMin = questionValidation?.min || 1;
+          const scaleMax = questionValidation?.max || 10;
+          if (processedValue < scaleMin || processedValue > scaleMax) {
+            return NextResponse.json({ message: `La respuesta para '${question.title}' debe estar entre ${scaleMin} y ${scaleMax}.` }, { status: 400 });
           }
           break;
         
         case QuestionType.FILE_UPLOAD:
-            if (question.required && (!processedValue || typeof processedValue !== 'object' || !processedValue.fileName || !processedValue.fileUrl)) {
+            // Si es requerido y está vacío, ya se manejó. Si llega aquí, hay un valor.
+            if (!processedValue || typeof processedValue !== 'object' || !processedValue.fileName || !processedValue.fileUrl) {
                 return NextResponse.json({ message: `La respuesta de subida de archivo para '${question.title}' es inválida o falta la URL.` }, { status: 400 });
             }
             break;
         case QuestionType.SIGNATURE:
-            if (question.required && (typeof processedValue !== 'string' || processedValue.length < 10)) {
+            if (typeof processedValue !== 'string' || processedValue.length < 10) {
                 return NextResponse.json({ message: `La respuesta de firma para '${question.title}' es inválida.` }, { status: 400 });
             }
             break;
         case QuestionType.MATRIX:
-            if (question.required && (typeof processedValue !== 'object' || processedValue === null || Array.isArray(processedValue) || Object.keys(processedValue).length === 0)) {
+            if (typeof processedValue !== 'object' || processedValue === null || Array.isArray(processedValue) || Object.keys(processedValue).length === 0) {
                 return NextResponse.json({ message: `La respuesta para '${question.title}' (matriz) es inválida.` }, { status: 400 });
             }
             break;
@@ -306,7 +307,7 @@ export async function POST(request: Request, { params }: { params: { surveyId: s
           isComplete,
           completedAt: isComplete ? new Date() : null,
           answers: {
-            create: answersToCreate,
+            create: answersToCreate, // ✅ Esto ahora incluye las respuestas vacías como 'value: null'
           },
         },
         include: {
