@@ -55,13 +55,6 @@ export function AdminSidebar() {
 
   return (
     <div className="flex h-full w-64 flex-col bg-white shadow-lg border-r border-slate-200">
-      {/* Logo */}
-      <div className="flex h-16 items-center justify-center border-b border-slate-200 bg-gradient-to-r from-blue-600 to-blue-700">
-        <div className="flex items-center space-x-2">
-          <BarChart3 className="h-8 w-8 text-white" />
-          <span className="text-lg font-bold text-white">Admin Panel</span>
-        </div>
-      </div>
 
       {/* User Info */}
       <div className="border-b border-slate-200 p-4">
