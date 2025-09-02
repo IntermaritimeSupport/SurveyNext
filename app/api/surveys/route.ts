@@ -32,7 +32,8 @@ export async function GET(request: Request) {
         },
         _count: {
           select: {
-            responses: true, // Contar el número de respuestas
+            responses: true,
+            questions: true,
           },
         },
       },
