@@ -1,15 +1,14 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { QuestionRenderer } from "./question-renderer"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ProgressBar } from "./progress-bar"
-
 import { QuestionType as PrismaQuestionType, type SurveyStatus } from "@prisma/client"
 import { CheckCircle, ChevronLeft, ChevronRight, Loader2, Send } from "lucide-react"
 import type { QuestionOption } from "../survey-builder/survey-manager"
@@ -48,11 +47,13 @@ interface SurveyFormProps {
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""
-const DEFAULT_QUESTIONS_PER_PAGE = 10 // ✅ Nuevo valor: paginación por defecto si hay muchas preguntas
-const PAGINATION_THRESHOLD = 5 // ✅ Si hay más de X preguntas, activamos la paginación
+const DEFAULT_QUESTIONS_PER_PAGE = 10
+const PAGINATION_THRESHOLD = 5
 
 export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormProps) {
   const router = useRouter()
+  const paramsId = location.pathname.split("/").pop()
+  console.log(paramsId)
   const [currentAnswers, setCurrentAnswers] = useState<Map<string, any>>(() => new Map())
   const [currentPageIndex, setCurrentPageIndex] = useState(0)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
@@ -64,9 +65,11 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
   const isEmailRequired = !survey.isAnonymous
   const [isShowingEmailStep, setIsShowingEmailStep] = useState(isEmailRequired)
 
+  // ✅ Ref al botón
+  const nextButtonRef = useRef<HTMLButtonElement>(null)
+
   const sortedQuestions = useMemo(() => initialQuestions.sort((a, b) => a.order - b.order), [initialQuestions])
 
-  // ✅ Lógica de paginación condicional
   const enablePagination = sortedQuestions.length > PAGINATION_THRESHOLD
   const questionsPerPage = enablePagination ? DEFAULT_QUESTIONS_PER_PAGE : sortedQuestions.length
 
@@ -86,6 +89,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
   const isLastQuestionPage = currentPageIndex === totalQuestionPages - 1
 
+  // ✅ Validaciones (idéntico a tu código original)
   const validateAnswer = (question: PublicQuestion, answerValue: any): string | null => {
     const isAnswerEmpty =
       answerValue === undefined ||
@@ -112,7 +116,6 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
           return "Ingresa un email válido."
         }
         break
-
       case PrismaQuestionType.TEXT:
       case PrismaQuestionType.TEXTAREA:
         if (typeof answerValue === "string") {
@@ -124,7 +127,6 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
           }
         }
         break
-
       case PrismaQuestionType.NUMBER:
         const numValue = Number(answerValue)
         if (isNaN(numValue)) {
@@ -137,7 +139,6 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
           return `El valor máximo es ${question.validation.max}.`
         }
         break
-
       case PrismaQuestionType.URL:
         const urlRegex =
           /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/[a-zA-Z0-9]+\.[^\s]{2,}|[a-zA-Z0-9]+\.[^\s]{2,})$/i
@@ -145,14 +146,12 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
           return "Ingresa una URL válida."
         }
         break
-
       case PrismaQuestionType.PHONE:
         const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/im
         if (typeof answerValue === "string" && !phoneRegex.test(answerValue)) {
           return "Ingresa un número de teléfono válido."
         }
         break
-
       case PrismaQuestionType.DATE:
         if (typeof answerValue === "string" && !/^\d{4}-\d{2}-\d{2}$/.test(answerValue)) {
           return `Formato de fecha inválido (YYYY-MM-DD).`
@@ -161,13 +160,11 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
           return `Formato de fecha inválido.`
         }
         break
-
       case PrismaQuestionType.TIME:
         if (typeof answerValue === "string" && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(answerValue)) {
           return `Formato de hora inválido (HH:mm).`
         }
         break
-
       case PrismaQuestionType.MULTIPLE_CHOICE:
       case PrismaQuestionType.DROPDOWN:
         const dropdownOptions = (question.options as QuestionOption[] | null) || []
@@ -175,7 +172,6 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
           return "La opción seleccionada es inválida."
         }
         break
-
       case PrismaQuestionType.CHECKBOXES:
         const checkboxOptions = (question.options as QuestionOption[] | null) || []
         if (!Array.isArray(answerValue)) {
@@ -186,7 +182,6 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
           return "Una o más opciones seleccionadas son inválidas."
         }
         break
-
       case PrismaQuestionType.RATING:
       case PrismaQuestionType.SCALE:
         const ratingScaleValue = Number(answerValue)
@@ -199,19 +194,16 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
           return `Debe estar entre ${minVal} y ${maxVal}.`
         }
         break
-
       case PrismaQuestionType.FILE_UPLOAD:
         if (typeof answerValue !== "object" || answerValue === null || !answerValue.fileName || !answerValue.fileUrl) {
           return "Debe adjuntar un archivo válido."
         }
         break
-
       case PrismaQuestionType.SIGNATURE:
         if (typeof answerValue !== "string" || answerValue.length < 10) {
           return "La firma es inválida."
         }
         break
-
       case PrismaQuestionType.MATRIX:
         if (
           typeof answerValue !== "object" ||
@@ -285,11 +277,10 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
       return
     }
 
-    // ✅ Lógica de paginación condicional
     if (enablePagination && !isLastQuestionPage) {
       setCurrentPageIndex((prev) => prev + 1)
     } else {
-      handleSubmit() // Si no hay paginación o es la última página, enviar
+      handleSubmit()
     }
   }
 
@@ -301,7 +292,6 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
       return
     }
 
-    // ✅ Lógica de paginación condicional
     if (enablePagination && currentPageIndex === 0 && isEmailRequired) {
       setIsShowingEmailStep(true)
       return
@@ -310,8 +300,6 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
     if (enablePagination && currentPageIndex > 0) {
       setCurrentPageIndex((prev) => prev - 1)
     }
-    // Si no hay paginación, el botón "Anterior" no debería ser visible o debería hacer algo diferente.
-    // Esto ya se maneja con el disabled prop en el botón.
   }
 
   const handleSubmit = async () => {
@@ -354,7 +342,6 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
         answers: answersForApi,
         isComplete: true,
       }
-      console.log("SurveyForm: Sending response data to API:", responseData)
 
       const apiResponse = await fetch(`${API_BASE_URL}/api/surveys/${survey.id}/responses`, {
         method: "POST",
@@ -371,12 +358,20 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
       setIsCompleted(true)
     } catch (error: any) {
-      console.error("SurveyForm: Error submitting survey:", error)
       setSubmissionError(error.message || "Error al enviar la encuesta. Inténtalo de nuevo.")
     } finally {
       setIsLoading(false)
     }
   }
+
+  // ✅ Capturar Enter
+  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" && event.target instanceof HTMLTextAreaElement) return
+    if (event.key === "Enter" && nextButtonRef.current && !nextButtonRef.current.disabled) {
+      event.preventDefault()
+      nextButtonRef.current.click()
+    }
+  }, [])
 
   if (isCompleted) {
     return (
@@ -388,17 +383,8 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
             </div>
             <h2 className="text-2xl font-bold text-slate-900 mb-4">¡Gracias por tu participación!</h2>
             <p className="text-slate-600 mb-6">Tu respuesta ha sido enviada exitosamente.</p>
-            <div className="bg-slate-50 rounded-lg p-4 mb-6">
-              <p className="text-sm text-slate-600">
-                <strong>Encuesta:</strong> {survey.title}
-                <br />
-                <strong>Completada:</strong> {new Date().toLocaleString()}
-                <br />
-                <strong>Preguntas respondidas:</strong> {Object.keys(currentAnswers).length}
-              </p>
-            </div>
-            <Button onClick={() => (window.location.href = "/")} variant="outline" className="w-full bg-transparent">
-              Volver al Inicio
+            <Button onClick={() => (window.location.href = `/survey/${paramsId}`)} variant="outline" className="w-full bg-transparent">
+              Volver al formulario
             </Button>
           </CardContent>
         </Card>
@@ -407,7 +393,11 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4">
+    <div
+      className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4"
+      onKeyDown={handleKeyDown}
+      tabIndex={0} // ✅ Necesario para capturar Enter
+    >
       <div className="max-w-3xl mx-auto">
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-xl shadow-lg mb-1">
           <div className="px-8 py-6 text-center">
@@ -426,58 +416,30 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
         <div className="bg-white rounded-b-xl shadow-lg border border-slate-200">
           <div className="p-8">
+            {/* Email step */}
             {isShowingEmailStep ? (
               <div className="space-y-6">
-                <div className="text-center pb-6 border-b border-slate-100">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"
-                      />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                    Información de Contacto
-                    {isEmailRequired && <span className="text-red-500 ml-1">*</span>}
-                  </h3>
-                  <p className="text-slate-600">Por favor, proporciona tu email para completar la encuesta.</p>
-                </div>
-
-                <div className="max-w-md mx-auto">
-                  <Label htmlFor="email" className="text-sm font-medium text-slate-700">
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={respondentEmail}
-                    onChange={(e) => {
-                      setRespondentEmail(e.target.value)
-                      setValidationErrors((prev) => {
-                        const newErrors = new Map(prev)
-                        newErrors.delete("email")
-                        return newErrors
-                      })
-                    }}
-                    placeholder="tu@email.com"
-                    className={`mt-1 ${validationErrors.has("email") ? "border-red-300 focus:border-red-300 focus:ring-red-200" : "focus:border-blue-500 focus:ring-blue-200"}`}
-                  />
-                  {validationErrors.get("email") && (
-                    <p className="text-sm text-red-600 mt-2 flex items-center">
-                      <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                          fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      {validationErrors.get("email")}
-                    </p>
-                  )}
-                </div>
+                <Label htmlFor="email" className="text-sm font-medium text-slate-700">
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={respondentEmail}
+                  onChange={(e) => {
+                    setRespondentEmail(e.target.value)
+                    setValidationErrors((prev) => {
+                      const newErrors = new Map(prev)
+                      newErrors.delete("email")
+                      return newErrors
+                    })
+                  }}
+                  placeholder="tu@email.com"
+                  className={`mt-1 ${validationErrors.has("email") ? "border-red-300 focus:border-red-300 focus:ring-red-200" : "focus:border-blue-500 focus:ring-blue-200"}`}
+                />
+                {validationErrors.get("email") && (
+                  <p className="text-sm text-red-600 mt-2">{validationErrors.get("email")}</p>
+                )}
               </div>
             ) : currentQuestionsBlock.length > 0 ? (
               <div className="space-y-8">
@@ -500,56 +462,39 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
             {submissionError && (
               <Alert variant="destructive" className="mt-6">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <AlertDescription className="ml-2">{submissionError}</AlertDescription>
+                <AlertDescription>{submissionError}</AlertDescription>
               </Alert>
             )}
-          </div>
 
-          <div className="flex justify-between items-center px-8 py-6 bg-slate-50 rounded-b-xl border-t border-slate-100">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={isShowingEmailStep || (!enablePagination && currentPageIndex === 0)}
-              className="bg-white hover:bg-slate-50 border-slate-300"
-            >
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Anterior
-            </Button>
-
-            <div className="text-sm text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200">
-              {isShowingEmailStep
-                ? `Paso ${currentStep} de ${totalSteps}: Información de Contacto`
-                : `Paso ${currentStep} de ${totalSteps}: Preguntas ${startIndex + 1}-${endIndex}`}
+            <div className="flex justify-between items-center mt-10">
+              <Button onClick={handlePrevious} variant="outline" className="flex items-center gap-2">
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </Button>
+              <Button
+                ref={nextButtonRef}
+                onClick={handleNext}
+                disabled={isLoading}
+                className="flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : enablePagination && !isLastQuestionPage ? (
+                  <>
+                    Siguiente
+                    <ChevronRight className="h-4 w-4" />
+                  </>
+                ) : (
+                  <>
+                    Enviar
+                    <Send className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
             </div>
-
-            <Button
-              onClick={handleNext}
-              disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...
-                </>
-              ) : !enablePagination || (isLastQuestionPage && !isShowingEmailStep) ? (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Enviar
-                </>
-              ) : (
-                <>
-                  Siguiente
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </>
-              )}
-            </Button>
           </div>
         </div>
       </div>
