@@ -21,7 +21,7 @@ interface PublicSurvey {
   isAnonymous: boolean
   showProgress: boolean
   allowMultipleResponses: boolean
-  status: SurveyStatus
+  status?: SurveyStatus
   startDate?: string
   endDate?: string
 }
