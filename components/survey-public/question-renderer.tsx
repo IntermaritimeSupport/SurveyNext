@@ -201,8 +201,8 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
             </SelectTrigger>
             <SelectContent>
               {Array.isArray(optionsDropdown) &&
-                optionsDropdown.map((option: any) => (
-                  <SelectItem key={option.id} value={option.value}>
+                optionsDropdown.map((option: any, index: number) => (
+                  <SelectItem key={index} value={option.value}>
                     {option.label}
                   </SelectItem>
                 ))}
@@ -215,10 +215,10 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
         return (
           <div className="space-y-2">
             {Array.isArray(optionsCheckboxes) &&
-              optionsCheckboxes.map((option: any) => {
+              optionsCheckboxes.map((option: any, index: number) => {
                 const isChecked = Array.isArray(localValue) && localValue.includes(option.value)
                 return (
-                  <div key={option.id} className="flex items-center space-x-2">
+                  <div key={index} className="flex items-center space-x-2">
                     <Checkbox
                       checked={isChecked}
                       onCheckedChange={(checked) => {
@@ -242,8 +242,8 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
         return (
           <RadioGroup value={localValue as string} onValueChange={handleValueChange}>
             {Array.isArray(optionsRadio) &&
-              optionsRadio.map((option: any) => (
-                <div key={option.id} className="flex items-center space-x-2">
+              optionsRadio.map((option: any, index: number) => (
+                <div key={index} className="flex items-center space-x-2">
                   <RadioGroupItem value={option.value} />
                   <Label>{option.label}</Label>
                 </div>
