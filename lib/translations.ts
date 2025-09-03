@@ -1,7 +1,7 @@
 export const translations = {
   es: {
     // Navegación y general
-    dashboard: "Panel de Control",
+    admin: "Panel de Control",
     surveys: "Encuestas",
     responses: "Respuestas",
     reports: "Reportes",
@@ -46,7 +46,7 @@ export const translations = {
   },
   en: {
     // Navigation and general
-    dashboard: "Dashboard",
+    admin: "admin",
     surveys: "Surveys",
     responses: "Responses",
     reports: "Reports",
@@ -91,7 +91,7 @@ export const translations = {
   },
   zh: {
     // 导航和通用
-    dashboard: "仪表板",
+    admin: "仪表板",
     surveys: "调查",
     responses: "回复",
     reports: "报告",

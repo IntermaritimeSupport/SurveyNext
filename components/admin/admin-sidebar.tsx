@@ -16,7 +16,7 @@ export function AdminSidebar() {
 
   const navigation = [
     {
-      name: t("dashboard"),
+      name: t("admin"),
       href: "/admin",
       icon: Home,
       current: pathname === "/admin",

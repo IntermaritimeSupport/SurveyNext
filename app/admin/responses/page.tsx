@@ -85,7 +85,7 @@ export default function SurveysListPage() {
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">Encuestas</h1>
             <p className="text-base text-gray-600">Gestiona tus encuestas y revisa sus respuestas</p>
           </div>
-          <Link href="/dashboard/surveys/new" passHref>
+          <Link href="/admin/surveys/create" passHref>
             <Button size="default" className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
               <PlusCircle className="w-5 h-5" />
               <span className="ml-2">Nueva Encuesta</span>
@@ -128,7 +128,7 @@ export default function SurveysListPage() {
                     : "Comienza creando tu primera encuesta para verla aquí y empezar a recopilar respuestas."}
                 </p>
                 {!searchTerm && (
-                  <Link href="/dashboard/surveys/new" className="mt-4 inline-block">
+                  <Link href="/admin/surveys/new" className="mt-4 inline-block">
                     <Button size="default" className="bg-blue-600 hover:bg-blue-700">
                       <PlusCircle className="w-5 h-5" />
                       <span className="ml-2">Crear Primera Encuesta</span>

@@ -1,4 +1,4 @@
-// src/app/dashboard/responses/[surveyId]/page.tsx
+// src/app/admin/responses/[surveyId]/page.tsx
 "use client"
 
 import { AdminLayout } from "@/components/admin/admin-layout"
@@ -103,7 +103,7 @@ export default function SurveyResponsesListPage() {
   }, [surveyResponses, searchTerm])
 
   const handleBackToSurveys = () => {
-    router.push("/dashboard/responses") // Volver a la lista principal de encuestas
+    router.push("/admin/responses") // Volver a la lista principal de encuestas
   }
 
   return (

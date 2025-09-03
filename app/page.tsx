@@ -61,7 +61,7 @@ export default function HomePage() {
               <Link href="/admin">
                 <Button className="bg-blue-600 hover:bg-blue-700">
                   <Settings className="w-4 h-4 mr-2" />
-                  {t("dashboard")}
+                  {t("admin")}
                 </Button>
               </Link>
             </div>

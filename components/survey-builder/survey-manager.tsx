@@ -90,12 +90,12 @@ export default function SurveyManager() {
           } else {
             console.error("Error al cargar la encuesta:", response.statusText);
             alert("Error al cargar la encuesta.");
-            router.push('/dashboard/surveys');
+            router.push('/admin/surveys');
           }
         } catch (error) {
           console.error("Error al cargar la encuesta:", error);
           alert("Error de red al cargar la encuesta.");
-          router.push('/dashboard/surveys');
+          router.push('/admin/surveys');
         } finally {
           setSurveyLoading(false);
         }
@@ -149,7 +149,7 @@ export default function SurveyManager() {
         const result = await response.json();
         if (!currentSurveyId) {
             setCurrentSurveyId(result.id);
-            router.push(`/dashboard/surveys/${result.id}`);
+            router.push(`/admin/surveys/${result.id}/edit`);
         }
         // Actualizamos el estado isPublished de surveyData con la respuesta del servidor (status)
         setSurveyData(prev => ({
@@ -384,7 +384,7 @@ export default function SurveyManager() {
               <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
                 <button
                   type="button"
-                  onClick={() => router.push('/dashboard/surveys')}
+                  onClick={() => router.push('/admin/surveys')}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   Cancelar

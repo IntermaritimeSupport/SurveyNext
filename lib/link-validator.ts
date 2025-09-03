@@ -5,7 +5,7 @@ export class LinkValidator {
     "auth",
     "login",
     "register",
-    "dashboard",
+    "admin",
     "survey",
     "surveys",
     "response",
