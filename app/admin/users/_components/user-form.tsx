@@ -40,6 +40,7 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel }: UserFormProps
   const [status, setStatus] = useState<UserStatus>(initialUser?.status || UserStatus.ACTIVE);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPasswordFields, setShowPasswordFields] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,7 +169,7 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel }: UserFormProps
               onChange={(e) => setEmail(e.target.value)}
               placeholder="ejemplo@dominio.com"
               disabled={isLoading || isEditing} // El email no se edita en este formulario una vez creado
-                                              // Si permites editar email, quita `isEditing` de `disabled`
+            // Si permites editar email, quita `isEditing` de `disabled`
             />
             {isEditing && <p className="text-sm text-slate-500 mt-1">El email no se puede cambiar directamente.</p>}
           </div>
@@ -186,7 +187,7 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel }: UserFormProps
           </div>
 
           {/* Contraseña solo si es nuevo usuario o si se quiere cambiar */}
-          {!isEditing || (isEditing && password.trim()) ? (
+          {!isEditing || showPasswordFields ? (
             <>
               <div>
                 <Label htmlFor="password">{isEditing ? "Nueva Contraseña (dejar vacío para no cambiar)" : "Contraseña *"}</Label>
@@ -213,14 +214,14 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel }: UserFormProps
               </div>
             </>
           ) : (
-            <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setPassword(' ')} // Valor temporal para mostrar los campos de contraseña
-                className="w-full"
-                disabled={isLoading}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowPasswordFields(true)} // mostrar los campos
+              className="w-full"
+              disabled={isLoading}
             >
-                Cambiar Contraseña
+              Cambiar Contraseña
             </Button>
           )}
 

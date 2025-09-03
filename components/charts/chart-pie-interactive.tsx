@@ -1,0 +1,377 @@
+"use client"
+import { Label, Pie, PieChart, Sector, Bar, BarChart, XAxis, YAxis, CartesianGrid, Area, AreaChart } from "recharts"
+import type { PieSectorDataItem } from "recharts/types/polar/Pie"
+import { useMemo } from "react"
+import { Download } from "lucide-react"
+import { Button } from "@/components/ui/button"
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { type ChartConfig, ChartContainer, ChartStyle, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { Badge } from "@/components/ui/badge"
+
+// =========================================================================
+// INTERFACES
+// =========================================================================
+
+interface ChartQuestionData {
+  id: string
+  title: string
+  type:
+    | "URL"
+    | "DROPDOWN"
+    | "RATING"
+    | "NUMBER"
+    | "TIME"
+    | "EMAIL"
+    | "PHONE"
+    | "MULTIPLE_CHOICE"
+    | "CHECKBOXES"
+    | "SCALE"
+  order: number
+  options?: { value: string; label: string }[]
+  responsesSummary?: { option: string; count: number }[]
+}
+
+interface SurveyQuestionResponsesChartProps {
+  surveyTitle: string
+  questions: ChartQuestionData[]
+  loading?: boolean
+  error?: string | null
+}
+
+// =========================================================================
+// PALETA DE COLORES VIBRANTES
+// =========================================================================
+const vibrantPalette = [
+  "hsl(217.2 91.2% 59.8%)", // Blue
+  "hsl(142.1 76.2% 36.3%)", // Green
+  "hsl(346.8 77.2% 49.8%)", // Red/Pink
+  "hsl(47.9 95.8% 53.1%)", // Yellow
+  "hsl(262.1 83.3% 57.8%)", // Purple
+  "hsl(24.6 95% 53.1%)", // Orange
+  "hsl(173.4 58.9% 39.1%)", // Teal
+  "hsl(339.6 82.2% 51.6%)", // Magenta
+  "hsl(197.4 71.4% 52.5%)", // Sky Blue
+  "hsl(119.4 50.4% 44.9%)", // Forest Green
+  "hsl(20.5 90.2% 48.2%)", // Red Orange
+  "hsl(280.4 89.1% 61.2%)", // Violet
+]
+
+// =========================================================================
+// SUBCOMPONENTE: QuestionChart (Gráfica individual para una pregunta)
+// =========================================================================
+interface QuestionChartProps {
+  question: ChartQuestionData
+}
+
+function QuestionChart({ question }: QuestionChartProps) {
+  const chartId = `chart-${question.id}`
+
+  const chartData = useMemo(() => {
+    if (!question.responsesSummary) return []
+    return question.responsesSummary
+      .filter((item) => item.count > 0)
+      .map((item, index) => ({
+        option: item.option,
+        count: item.count,
+        key: `option${index}`,
+        fill: vibrantPalette[index % vibrantPalette.length], // Direct fill property for better color control
+      }))
+  }, [question])
+
+  const chartConfig = useMemo(() => {
+    const config: ChartConfig = {
+      count: {
+        label: "Respuestas",
+      },
+    }
+    chartData.forEach((item, index) => {
+      config[item.key as keyof typeof config] = {
+        label: item.option,
+        color: vibrantPalette[index % vibrantPalette.length],
+      }
+    })
+    return config
+  }, [chartData])
+
+  const totalSelections = useMemo(() => chartData.reduce((acc, item) => acc + item.count, 0), [chartData])
+
+  if (chartData.length === 0) {
+    return (
+      <Card className="flex flex-col h-full">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg leading-tight">{question.title}</CardTitle>
+          <CardDescription className="flex items-center gap-1 text-sm">
+            Tipo:{" "}
+            <Badge variant="secondary" className="px-1 py-0 text-[0.6rem]">
+              {question.type.replace("_", " ")}
+            </Badge>
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-1 items-center justify-center p-4 text-muted-foreground text-sm">
+          No hay respuestas para esta pregunta.
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const renderChart = () => {
+    const hasLongLabels = chartData.some((d) => d.option.length > 15)
+
+    // Use bar chart for better readability with long labels or many options
+    if (hasLongLabels || chartData.length > 5) {
+      return (
+        <ChartContainer config={chartConfig} className="h-[200px] w-full">
+          <BarChart data={chartData} layout="horizontal" margin={{ left: 60, right: 20, top: 10, bottom: 10 }}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+            <XAxis type="number" className="text-xs" />
+            <YAxis type="category" dataKey="option" className="text-xs" width={50} tick={{ fontSize: 10 }} />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <Bar dataKey="count" radius={[0, 4, 4, 0]} />
+          </BarChart>
+        </ChartContainer>
+      )
+    }
+
+    // Use area chart for rating scales to show distribution
+    if (question.type === "RATING" || question.type === "SCALE") {
+      return (
+        <ChartContainer config={chartConfig} className="h-[200px] w-full">
+          <AreaChart data={chartData} margin={{ left: 20, right: 20, top: 10, bottom: 10 }}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+            <XAxis dataKey="option" className="text-xs" />
+            <YAxis className="text-xs" />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <Area
+              type="monotone"
+              dataKey="count"
+              stroke="hsl(217.2 91.2% 59.8%)"
+              fill="hsl(217.2 91.2% 59.8%)"
+              fillOpacity={0.3}
+              strokeWidth={2}
+            />
+          </AreaChart>
+        </ChartContainer>
+      )
+    }
+
+    // Default to enhanced pie chart for multiple choice
+    return (
+      <ChartContainer config={chartConfig} className="mx-auto aspect-square h-[200px] w-[200px]">
+        <PieChart>
+          <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+          <Pie
+            data={chartData}
+            dataKey="count"
+            nameKey="option"
+            innerRadius={50}
+            outerRadius={80}
+            strokeWidth={2}
+            stroke="hsl(var(--background))"
+            activeIndex={-1}
+            activeShape={({ outerRadius = 0, ...props }: PieSectorDataItem) => (
+              <g>
+                <Sector {...props} outerRadius={outerRadius + 8} stroke="hsl(var(--foreground))" strokeWidth={2} />
+              </g>
+            )}
+          >
+            <Label
+              content={({ viewBox }) => {
+                if (!viewBox || !("cx" in viewBox) || !("cy" in viewBox)) {
+                  return null
+                }
+                return (
+                  <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                    <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-2xl font-bold">
+                      {totalSelections.toLocaleString()}
+                    </tspan>
+                    <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 20} className="fill-muted-foreground text-sm">
+                      Total
+                    </tspan>
+                  </text>
+                )
+              }}
+            />
+          </Pie>
+        </PieChart>
+      </ChartContainer>
+    )
+  }
+
+  return (
+    <Card data-chart={chartId} className="flex flex-col h-full">
+      <ChartStyle id={chartId} config={chartConfig} />
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg leading-tight">{question.title}</CardTitle>
+        <CardDescription className="flex items-center gap-2 text-sm">
+          <Badge variant="outline" className="px-2 py-1 text-xs font-medium">
+            {question.type.replace("_", " ")}
+          </Badge>
+          <span className="text-muted-foreground">
+            {totalSelections} respuesta{totalSelections !== 1 ? "s" : ""}
+          </span>
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-1 justify-center items-center p-4 pt-0">{renderChart()}</CardContent>
+    </Card>
+  )
+}
+
+// =========================================================================
+// COMPONENTE PRINCIPAL: SurveyQuestionResponsesChart
+// =========================================================================
+export function SurveyQuestionResponsesChart({
+  surveyTitle,
+  questions,
+  loading = false,
+  error = null,
+}: SurveyQuestionResponsesChartProps) {
+  const relevantQuestions = useMemo(
+    () =>
+      questions.filter(
+        (q) =>
+          q.type === "MULTIPLE_CHOICE" ||
+          q.type === "CHECKBOXES" ||
+          q.type === "DROPDOWN" ||
+          q.type === "RATING" ||
+          q.type === "SCALE",
+      ) || [],
+    [questions],
+  )
+
+  const downloadSummary = () => {
+    const summary = {
+      encuesta: surveyTitle,
+      fechaGeneracion: new Date().toLocaleString("es-ES"),
+      totalPreguntas: relevantQuestions.length,
+      preguntas: relevantQuestions.map((question) => {
+        const totalRespuestas = question.responsesSummary?.reduce((acc, item) => acc + item.count, 0) || 0
+        return {
+          titulo: question.title,
+          tipo: question.type.replace("_", " "),
+          totalRespuestas,
+          opciones:
+            question.responsesSummary?.map((item) => ({
+              opcion: item.option,
+              cantidad: item.count,
+              porcentaje: totalRespuestas > 0 ? ((item.count / totalRespuestas) * 100).toFixed(1) + "%" : "0%",
+            })) || [],
+        }
+      }),
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,"
+
+    // Header information in separate rows with proper column structure
+    csvContent += "Información General,,,,\n"
+    csvContent += `Encuesta,"${surveyTitle}",,,\n`
+    csvContent += `Fecha de Generación,"${summary.fechaGeneracion}",,,\n`
+    csvContent += `Total de Preguntas,${summary.totalPreguntas},,,\n`
+    csvContent += ",,,,\n" // Empty row separator
+
+    // Column headers for data
+    csvContent += "Pregunta,Tipo,Opción,Cantidad,Porcentaje\n"
+
+    // Data rows with consistent column structure
+    summary.preguntas.forEach((pregunta) => {
+      if (pregunta.opciones.length === 0) {
+        csvContent += `"${pregunta.titulo}","${pregunta.tipo}","Sin respuestas",0,"0%"\n`
+      } else {
+        pregunta.opciones.forEach((opcion) => {
+          csvContent += `"${pregunta.titulo}","${pregunta.tipo}","${opcion.opcion}",${opcion.cantidad},"${opcion.porcentaje}"\n`
+        })
+      }
+    })
+
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute(
+      "download",
+      `resumen-encuesta-${surveyTitle.replace(/[^a-z0-9]/gi, "-").toLowerCase()}-${new Date().toISOString().split("T")[0]}.csv`,
+    )
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  // Renderizado de Estados (Cargando, Error, Sin Datos)
+  if (loading) {
+    return (
+      <Card className="col-span-full">
+        <CardHeader>
+          <CardTitle>Cargando datos del gráfico...</CardTitle>
+          <CardDescription>Procesando respuestas de la encuesta.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex h-[300px] items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+            <span className="text-gray-600">Cargando...</span>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card className="col-span-full">
+        <CardHeader>
+          <CardTitle>Error al cargar el gráfico</CardTitle>
+          <CardDescription>No se pudieron procesar los datos de las respuestas.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-700">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (relevantQuestions.length === 0) {
+    return (
+      <Card className="col-span-full">
+        <CardHeader>
+          <CardTitle>Análisis de Respuestas - {surveyTitle}</CardTitle>
+          <CardDescription>Visualización de datos de respuestas con gráficos adaptativos.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex h-[200px] items-center justify-center p-6 text-muted-foreground">
+          La encuesta no tiene preguntas compatibles para análisis gráfico o no hay respuestas disponibles.
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="w-full">
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Análisis de Respuestas - {surveyTitle}</CardTitle>
+              <CardDescription>
+                Visualización interactiva de datos de respuestas con gráficos adaptativos.
+              </CardDescription>
+            </div>
+            <Button
+              onClick={downloadSummary}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 bg-transparent"
+            >
+              <Download className="h-4 w-4" />
+              Descargar Resumen
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        {relevantQuestions.map((question) => (
+          <QuestionChart key={question.id} question={question} />
+        ))}
+      </div>
+    </div>
+  )
+}
