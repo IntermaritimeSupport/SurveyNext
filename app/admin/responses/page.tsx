@@ -2,7 +2,7 @@
 
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { useEffect, useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -12,23 +12,28 @@ import Link from "next/link"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 // Importar los tipos de Prisma directamente
-import type { Survey as PrismaSurvey } from "@prisma/client"
+import type { Survey as PrismaSurvey, SurveyStatus } from "@prisma/client" // ✅ Asegúrate de importar SurveyStatus
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 import { Search, FileText, ExternalLink, Eye, PlusCircle } from "lucide-react"
 
+// ✅ Importar el nuevo componente del gráfico
+import { Loader2 } from "lucide-react" // Necesario para el spinner de carga
+import { SurveyResponsesBarChart } from "@/components/charts/chart-bar-interactive"
+
 // =========================================================================
-// INTERFACES
+// INTERFACES - ¡AHORA ÚNICA Y EXTENDIDA!
 // =========================================================================
 
-interface APISurvey
-  extends Pick<PrismaSurvey, "id" | "title" | "description" | "isAnonymous" | "status" | "createdAt"> {
+// ✅ Extiende directamente de PrismaSurvey para incluir todas sus propiedades
+// y luego añade las propiedades adicionales como '_count'.
+export interface APISurvey extends PrismaSurvey { // Exporta para que pueda ser importada
   _count?: {
-    responses: number
-  }
+    responses: number;
+    // Si _count también trae questions, puedes añadirlo aquí
+    questions?: number;
+  };
 }
-
-// const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
 // =========================================================================
 // SURVEYS LIST PAGE COMPONENT
@@ -82,7 +87,7 @@ export default function SurveysListPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Encuestas</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Respuestas de Encuestas</h1>
             <p className="text-base text-gray-600">Gestiona tus encuestas y revisa sus respuestas</p>
           </div>
           <Link href="/admin/surveys/create" passHref>
@@ -92,6 +97,25 @@ export default function SurveysListPage() {
             </Button>
           </Link>
         </div>
+
+        {loadingSurveys ? (
+          <Card className="col-span-full">
+            <CardHeader>
+              <CardTitle>Cargando datos del gráfico...</CardTitle>
+              <CardDescription>Obteniendo encuestas y sus respuestas.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex h-[300px] items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+              <span className="ml-2 text-gray-600">Cargando...</span>
+            </CardContent>
+          </Card>
+        ) : errorSurveys ? (
+          <Alert variant="destructive" className="mt-3">
+            <AlertDescription>{errorSurveys}</AlertDescription>
+          </Alert>
+        ) : (
+          <SurveyResponsesBarChart surveys={allSurveys} />
+        )}
 
         <Card className="border-0 shadow-sm overflow-hidden">
           <CardContent className="p-0">
@@ -189,14 +213,18 @@ export default function SurveysListPage() {
                                 ? "bg-green-100 text-green-800 border-green-200"
                                 : survey.status === "DRAFT"
                                   ? "bg-gray-100 text-gray-800 border-gray-200"
-                                  : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                                  : survey.status === "PAUSED" // ✅ Añadir el estado PAUSED
+                                    ? "bg-orange-100 text-orange-800 border-orange-200"
+                                    : "bg-yellow-100 text-yellow-800 border-yellow-200" // Fallback para otros estados
                             }`}
                           >
                             {survey.status === "PUBLISHED"
                               ? "Publicada"
                               : survey.status === "DRAFT"
                                 ? "Borrador"
-                                : survey.status}
+                                : survey.status === "PAUSED"
+                                  ? "Pausada" // ✅ Texto para PAUSED
+                                  : survey.status}
                           </Badge>
                         </TableCell>
                         <TableCell className="py-3 px-4 text-center">
