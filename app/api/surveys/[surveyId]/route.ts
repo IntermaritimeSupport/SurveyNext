@@ -192,20 +192,21 @@ export async function PUT(request: Request, { params }: { params: { surveyId: st
 }
 
 // ... (DELETE route - también necesita await params)
-export async function DELETE(request: Request, { params }: { params: { surveyId: string | Promise<string> } }) {
-  const resolvedParams = await params;
-  const surveyId: string = resolvedParams.surveyId as string;
+export async function DELETE(request: Request, { params }: { params: { surveyId: string } }) {
+  const { surveyId } = params; 
 
   try {
     await prisma.survey.delete({
       where: { id: surveyId },
     });
-    return NextResponse.json({ message: 'Encuesta eliminada correctamente' }, { status: 204 });
+    return new NextResponse(null, { status: 204 }); 
+
   } catch (error: any) {
     console.error('Error deleting survey:', error);
+
     if (error.code === 'P2025') {
       return NextResponse.json({ message: 'Encuesta no encontrada para eliminar' }, { status: 404 });
     }
-    return NextResponse.json({ message: 'Error al eliminar la encuesta' }, { status: 500 });
+    return NextResponse.json({ message: 'Error interno del servidor al eliminar la encuesta' }, { status: 500 });
   }
 }
