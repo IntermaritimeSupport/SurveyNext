@@ -82,7 +82,7 @@ export default function SurveyManager() {
             setSurveyData({
               ...data,
               // Mapeamos el enum 'status' de Prisma (DRAFT/PUBLISHED) a nuestro booleano 'isPublished'
-              isPublished: data.status === "PUBLISHED", 
+              isPublished: data.status === "PUBLISHED",
               startDate: data.startDate ? new Date(data.startDate).toISOString().split('T')[0] : '',
               endDate: data.endDate ? new Date(data.endDate).toISOString().split('T')[0] : '',
             });
@@ -126,15 +126,15 @@ export default function SurveyManager() {
 
       // Preparamos los datos a enviar
       const dataToSend = {
-          ...surveyData,
-          // ✅ EXCLUIMOS el campo 'status' directamente del spread de surveyData
-          // para asegurarnos de que solo 'isPublished' controle el estado.
-          // Si SurveyData tiene una propiedad 'status', la sobrescribimos o la eliminamos.
-          status: undefined, // Aseguramos que no se envíe un 'status' obsoleto
-          userId: userId,
-          startDate: surveyData.startDate || null,
-          endDate: surveyData.endDate || null,
-          isPublished: surveyData.isPublished // ✅ Enviamos el valor actual del checkbox
+        ...surveyData,
+        // ✅ EXCLUIMOS el campo 'status' directamente del spread de surveyData
+        // para asegurarnos de que solo 'isPublished' controle el estado.
+        // Si SurveyData tiene una propiedad 'status', la sobrescribimos o la eliminamos.
+        status: undefined, // Aseguramos que no se envíe un 'status' obsoleto
+        userId: userId,
+        startDate: surveyData.startDate || null,
+        endDate: surveyData.endDate || null,
+        isPublished: surveyData.isPublished // ✅ Enviamos el valor actual del checkbox
       };
 
       const response = await fetch(url, {
@@ -148,13 +148,13 @@ export default function SurveyManager() {
       if (response.ok) {
         const result = await response.json();
         if (!currentSurveyId) {
-            setCurrentSurveyId(result.id);
-            router.push(`/admin/surveys/${result.id}/edit`);
+          setCurrentSurveyId(result.id);
+          router.push(`/admin/surveys/${result.id}/edit`);
         }
         // Actualizamos el estado isPublished de surveyData con la respuesta del servidor (status)
         setSurveyData(prev => ({
-            ...prev,
-            isPublished: result.status === "PUBLISHED"
+          ...prev,
+          isPublished: result.status === "PUBLISHED"
         }));
         alert(`Encuesta ${currentSurveyId ? 'actualizada' : 'creada'} exitosamente.`);
         setActiveTab("questions");
@@ -185,6 +185,16 @@ export default function SurveyManager() {
       </div>
     );
   }
+  // Función para generar un slug
+  const generateCustomLink = (title: string) => {
+    return title
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "-")        // espacios -> guiones
+      .replace(/[^a-z0-9-]/g, "")  // solo letras/números/-
+      .replace(/^-+|-+$/g, "");    // quita guiones al inicio/fin
+  };
+
 
   // Bandera para determinar si estamos creando una nueva encuesta
   const isCreatingNewSurvey = currentSurveyId === undefined;
@@ -203,8 +213,8 @@ export default function SurveyManager() {
                 type="button"
                 onClick={() => setActiveTab("survey")}
                 className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm focus:outline-none ${activeTab === "survey"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
               >
                 Configuración de la Encuesta
@@ -213,8 +223,8 @@ export default function SurveyManager() {
                 type="button"
                 onClick={() => setActiveTab("questions")}
                 className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm focus:outline-none ${activeTab === "questions"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
                 disabled={isCreatingNewSurvey} // Deshabilita si estamos creando una nueva encuesta
                 title={isCreatingNewSurvey ? "Primero debes guardar la configuración de la encuesta." : ""}
@@ -277,9 +287,23 @@ export default function SurveyManager() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-medium text-gray-900">Enlace Personalizado</h2>
-                  <button type="button" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!surveyData.title.trim()) {
+                        alert("Primero escribe un título para generar el enlace");
+                        return;
+                      }
+                      setSurveyData({
+                        ...surveyData,
+                        customLink: generateCustomLink(surveyData.title),
+                      });
+                    }}
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  >
                     🔄 Generar
                   </button>
+
                 </div>
 
                 <div>

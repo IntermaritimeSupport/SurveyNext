@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Eye, Edit, MoreHorizontal, Loader2 } from "lucide-react"
+import { Eye, Edit, MoreHorizontal, Loader2, Share } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 
@@ -55,6 +55,17 @@ export function RecentSurveys() {
 
     fetchRecentSurveys()
   }, []) // El array de dependencias vacío asegura que se ejecute solo una vez al montar
+
+  const copyLink = async (link: string) => {
+    try {
+      await navigator.clipboard.writeText(link)
+      alert("✅ Enlace copiado al portapapeles")
+    } catch (err) {
+      console.error("Error al copiar el enlace:", err)
+      alert("❌ No se pudo copiar el enlace")
+    }
+  }
+
 
   if (loading) {
     return (
@@ -155,6 +166,16 @@ export function RecentSurveys() {
                         <Eye className="h-3 w-3" />
                       </Button>
                     </Link>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 w-7 p-0 bg-transparent"
+                      disabled={survey.status !== "PUBLISHED"}
+                      onClick={() => copyLink(`${window.location.origin}/survey/${survey.customLink}`)}
+                    >
+                      <Share className="h-3 w-3" />
+                    </Button>
+
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="h-7 w-7 p-0 bg-transparent">
