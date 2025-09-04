@@ -11,13 +11,13 @@ export default function HomePage() {
   const { t } = useLanguage()
 
   const features = [
-    {
-      icon: PlusCircle,
-      title: t("createSurvey"),
-      description: "Crea encuestas personalizadas con diferentes tipos de preguntas",
-      href: "/admin/surveys/create",
-      color: "text-blue-600",
-    },
+    // {
+    //   icon: PlusCircle,
+    //   title: t("createSurvey"),
+    //   description: "Crea encuestas personalizadas con diferentes tipos de preguntas",
+    //   href: "/admin/surveys/create",
+    //   color: "text-blue-600",
+    // },
     {
       icon: FileText,
       title: t("surveys"),
@@ -25,20 +25,20 @@ export default function HomePage() {
       href: "/admin/surveys",
       color: "text-green-600",
     },
-    {
-      icon: Users,
-      title: t("responses"),
-      description: "Visualiza y analiza las respuestas de tus encuestas",
-      href: "/admin/responses",
-      color: "text-purple-600",
-    },
-    {
-      icon: BarChart3,
-      title: t("reports"),
-      description: "Genera reportes detallados y exporta datos",
-      href: "/admin/reports",
-      color: "text-orange-600",
-    },
+    // {
+    //   icon: Users,
+    //   title: t("responses"),
+    //   description: "Visualiza y analiza las respuestas de tus encuestas",
+    //   href: "/admin/responses",
+    //   color: "text-purple-600",
+    // },
+    // {
+    //   icon: BarChart3,
+    //   title: t("reports"),
+    //   description: "Genera reportes detallados y exporta datos",
+    //   href: "/admin/reports",
+    //   color: "text-orange-600",
+    // },
   ]
 
   return (
@@ -80,7 +80,7 @@ export default function HomePage() {
         </div>
 
         {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-1 gap-6 mb-12">
           {features.map((feature, index) => {
             const Icon = feature.icon
             return (
@@ -101,24 +101,6 @@ export default function HomePage() {
           })}
         </div>
 
-        {/* Quick Stats */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
-          <h3 className="text-2xl font-bold text-slate-900 mb-6 text-center">Características del Sistema</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600 mb-2">∞</div>
-              <div className="text-slate-600">Encuestas Ilimitadas</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">3</div>
-              <div className="text-slate-600">Idiomas Soportados</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-purple-600 mb-2">11</div>
-              <div className="text-slate-600">Tipos de Preguntas</div>
-            </div>
-          </div>
-        </div>
       </main>
     </div>
   )
