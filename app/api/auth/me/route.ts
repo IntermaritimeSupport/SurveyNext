@@ -1,9 +1,11 @@
 // app/api/auth/me/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers'; // Para acceder a las cookies
+import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client'
+
 const prisma = new PrismaClient()
+
 const allowedOrigins = [
   'http://localhost:3000',
   'https://survey-next-git-main-intermaritime.vercel.app',
@@ -40,14 +42,16 @@ interface JwtPayload {
 }
 
 // GET /api/auth/me - Obtener información del usuario autenticado
-export async function GET(request: NextRequest, response: NextResponse) {
+export async function GET(request: NextRequest) {
   const origin = request.headers.get('origin')
   try {
-    const token = (await cookies()).get('token')?.value; // Intenta obtener el token de la cookie
+    const token = (await cookies()).get('token')?.value;
 
     if (!token) {
-      // Si no hay token en las cookies, el usuario no está autenticado
-      return NextResponse.json({ message: 'No autenticado' }, { status: 401 });
+      return NextResponse.json(
+        { message: 'No autenticado' },
+        { status: 401, headers: withCors(origin) }
+      )
     }
 
     const jwtSecret = process.env.JWT_SECRET;
@@ -57,42 +61,43 @@ export async function GET(request: NextRequest, response: NextResponse) {
 
     let decodedToken: JwtPayload;
     try {
-      // Verificar y decodificar el token
       decodedToken = jwt.verify(token, jwtSecret) as JwtPayload;
     } catch (jwtError) {
-      // Si el token es inválido o ha expirado
       console.error('Error al verificar el token JWT:', jwtError);
-      return NextResponse.json({ message: 'Token inválido o expirado' }, { status: 401 });
+      return NextResponse.json(
+        { message: 'Token inválido o expirado' },
+        { status: 401, headers: withCors(origin) }
+      )
     }
 
-    // Buscar el usuario en la base de datos para asegurar que aún existe y está activo
     const user = await prisma.user.findUnique({
       where: { id: decodedToken.userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        status: true, // Puedes verificar el estado si tienes un campo 'status'
-      },
+      select: { id: true, email: true, name: true, role: true, status: true },
     });
 
-    if (!user || user.status !== 'ACTIVE') { // O cualquier lógica de estado que uses
-      // Si el usuario no existe o no está activo, el token no es válido para una sesión
-      return NextResponse.json({ message: 'Usuario no encontrado o inactivo' }, { status: 401 });
+    if (!user || user.status !== 'ACTIVE') {
+      return NextResponse.json(
+        { message: 'Usuario no encontrado o inactivo' },
+        { status: 401, headers: withCors(origin) }
+      )
     }
 
-    // Si todo es válido, devuelve la información del usuario
-    return NextResponse.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
+    return NextResponse.json(
+      {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        },
       },
-    }, { status: 200 });
+      { status: 200, headers: withCors(origin) }
+    )
   } catch (error) {
     console.error('Error en /api/auth/me:', error);
-    return NextResponse.json({ message: 'Error interno del servidor' }, { status: 500 });
+    return NextResponse.json(
+      { message: 'Error interno del servidor' },
+      { status: 500, headers: withCors(origin) }
+    )
   }
 }

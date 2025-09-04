@@ -1,7 +1,9 @@
 // app/api/surveys/[surveyId]/questions/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+
 const prisma = new PrismaClient()
+
 const allowedOrigins = [
   'http://localhost:3000',
   'https://survey-next-git-main-intermaritime.vercel.app',
@@ -28,16 +30,17 @@ export async function OPTIONS(req: NextRequest) {
   })
 }
 
-
-// GET /api/public/survey-questions/[customLink] - Obtener las preguntas de una encuesta por su enlace personalizado
-export async function GET(request: NextRequest, { params }: { params: { customlink: string } }) {
+// GET /api/surveys/[surveyId]/questions - Obtener preguntas de una encuesta por ID
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { surveyId: string } }
+) {
   const origin = request.headers.get('origin')
-  const { customlink } = params;
-    console.log(params)
-  try {
+  const { surveyId } = params
 
-    const survey = await prisma.survey.findUniqueOrThrow({
-      where: { customLink: customlink }, // 👈 asegúrate de usar la prop
+  try {
+    const survey = await prisma.survey.findUnique({
+      where: { id: surveyId },
       select: {
         id: true,
         title: true,
@@ -49,56 +52,78 @@ export async function GET(request: NextRequest, { params }: { params: { customli
         startDate: true,
         endDate: true,
       },
-    });
+    })
 
     if (!survey) {
-      return NextResponse.json({ message: 'Encuesta no encontrada' }, { status: 404 });
+      return NextResponse.json(
+        { message: 'Encuesta no encontrada' },
+        { status: 404, headers: withCors(origin) }
+      )
     }
 
-    // 2. Verificar el estado de la encuesta (solo si está publicada y dentro de las fechas)
+    // Verificar si la encuesta está activa
     if (survey.status !== 'PUBLISHED') {
-      return NextResponse.json({ message: 'Esta encuesta no está activa actualmente.' }, { status: 403 });
+      return NextResponse.json(
+        { message: 'Esta encuesta no está activa actualmente.' },
+        { status: 403, headers: withCors(origin) }
+      )
     }
 
-    const now = new Date();
+    const now = new Date()
     if (survey.startDate && now < survey.startDate) {
-      return NextResponse.json({ message: 'La encuesta aún no ha comenzado.' }, { status: 403 });
+      return NextResponse.json(
+        { message: 'La encuesta aún no ha comenzado.' },
+        { status: 403, headers: withCors(origin) }
+      )
     }
     if (survey.endDate && now > survey.endDate) {
-      return NextResponse.json({ message: 'La encuesta ha finalizado.' }, { status: 403 });
+      return NextResponse.json(
+        { message: 'La encuesta ha finalizado.' },
+        { status: 403, headers: withCors(origin) }
+      )
     }
 
-    // 3. Obtener las preguntas relacionadas con esta encuesta
+    // Preguntas de la encuesta
     const questions = await prisma.question.findMany({
-      where: { surveyId: survey.id }, // Usar el ID de la encuesta encontrada
+      where: { surveyId: survey.id },
       orderBy: { order: 'asc' },
-      select: { // Seleccionar solo los campos necesarios para el cliente que va a responder
+      select: {
         id: true,
         title: true,
         description: true,
         type: true,
         required: true,
         order: true,
-        options: true,    // Para preguntas con opciones
-        validation: true, // Para reglas de validación
+        options: true,
+        validation: true,
       },
-    });
+    })
 
-    // 4. Devolver la información de la encuesta y sus preguntas
-    return NextResponse.json({
-      survey: {
-        id: survey.id,
-        title: survey.title,
-        description: survey.description,
-        isAnonymous: survey.isAnonymous,
-        showProgress: survey.showProgress,
-        allowMultipleResponses: survey.allowMultipleResponses,
+    return NextResponse.json(
+      {
+        survey: {
+          id: survey.id,
+          title: survey.title,
+          description: survey.description,
+          isAnonymous: survey.isAnonymous,
+          showProgress: survey.showProgress,
+          allowMultipleResponses: survey.allowMultipleResponses,
+        },
+        questions,
       },
-      questions: questions,
-    }, { status: 200 });
-
+      { status: 200, headers: withCors(origin) }
+    )
   } catch (error) {
-    console.error(`Error fetching survey questions by customLink (${customlink}):`, error);
-    return NextResponse.json({ message: 'Error interno del servidor al obtener las preguntas de la encuesta' }, { status: 500 });
+    console.error(
+      `Error fetching survey questions for surveyId (${surveyId}):`,
+      error
+    )
+    return NextResponse.json(
+      {
+        message:
+          'Error interno del servidor al obtener las preguntas de la encuesta',
+      },
+      { status: 500, headers: withCors(origin) }
+    )
   }
 }

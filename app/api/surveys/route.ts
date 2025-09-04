@@ -1,79 +1,60 @@
 // app/api/surveys/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient, SurveyStatus } from '@prisma/client'
-const prisma = new PrismaClient()
+import { PrismaClient, SurveyStatus, QuestionType } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
 const allowedOrigins = [
   'http://localhost:3000',
   'https://survey-next-git-main-intermaritime.vercel.app',
   'https://surveys.intermaritime.org',
-]
+];
 
 // Función auxiliar para CORS
 function withCors(origin: string | null) {
-  const isAllowed = origin && allowedOrigins.includes(origin)
+  const isAllowed = origin && allowedOrigins.includes(origin);
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token',
     'Access-Control-Allow-Credentials': 'true',
-  }
+  };
 }
 
 // Preflight request (OPTIONS)
 export async function OPTIONS(req: NextRequest) {
-  const origin = req.headers.get('origin')
+  const origin = req.headers.get('origin');
   return new NextResponse(null, {
     status: 200,
     headers: withCors(origin),
-  })
+  });
 }
 
 // GET /api/surveys - Obtener todas las encuestas
-export async function GET(request: Request) {
-  const origin = request.headers.get('origin')
+export async function GET(request: NextRequest) {
+  const origin = request.headers.get('origin');
   try {
     const surveys = await prisma.survey.findMany({
-      orderBy: {
-        createdAt: 'desc', // Ordenar por fecha de creación descendente
-      },
-      // Puedes incluir relaciones si es necesario, por ejemplo, las preguntas o el usuario
+      orderBy: { createdAt: 'desc' },
       include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+        user: { select: { id: true, name: true, email: true } },
         questions: {
-          select: {
-            id: true,
-            title: true,
-            type: true,
-            order: true,
-          },
-          orderBy: {
-            order: 'asc', // Ordenar preguntas por orden
-          },
+          select: { id: true, title: true, type: true, order: true },
+          orderBy: { order: 'asc' },
         },
-        _count: {
-          select: {
-            responses: true,
-            questions: true,
-          },
-        },
+        _count: { select: { responses: true, questions: true } },
       },
     });
-    return NextResponse.json(surveys, { status: 200 });
-  } catch (error) {
+    return NextResponse.json(surveys, { status: 200, headers: withCors(origin) });
+  } catch (error: any) {
     console.error('Error fetching surveys:', error);
-    return NextResponse.json({ message: 'Error al obtener las encuestas' }, { status: 500 });
+    return NextResponse.json({ message: 'Error al obtener las encuestas', details: error.message }, { status: 500, headers: withCors(origin) });
   }
 }
 
 // POST /api/surveys - Crear una nueva encuesta
-export async function POST(request: Request) {
-  const origin = request.headers.get('origin')
+export async function POST(request: NextRequest) {
+  const origin = request.headers.get('origin');
   try {
     const body = await request.json();
     const {
@@ -85,18 +66,17 @@ export async function POST(request: Request) {
       allowMultipleResponses,
       startDate,
       endDate,
-      userId, // Necesitas un userId para relacionar la encuesta con un usuario
-      questions, // Si quieres crear preguntas junto con la encuesta
-      isPublished
+      userId,
+      questions,
+      isPublished,
     } = body;
 
-    // Validación básica de campos requeridos
+    // Validación de campos obligatorios
     if (!title || !customLink || !userId) {
-      return NextResponse.json({ message: 'Faltan campos obligatorios: title, customLink, userId' }, { status: 400 });
+      return NextResponse.json({ message: 'Faltan campos obligatorios: title, customLink, userId' }, { status: 400, headers: withCors(origin) });
     }
 
-    // Puedes añadir validación para customLink (ej. formato URL, unicidad)
-
+    // Crear encuesta
     const newSurvey = await prisma.survey.create({
       data: {
         title,
@@ -108,19 +88,23 @@ export async function POST(request: Request) {
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
         userId,
-        status: isPublished ? SurveyStatus.PUBLISHED : SurveyStatus.DRAFT, // ✅ usar el valor del toggle
-
+        status: isPublished ? SurveyStatus.PUBLISHED : SurveyStatus.DRAFT,
         ...(questions && questions.length > 0 && {
           questions: {
-            create: questions.map((q: any, index: number) => ({
-              title: q.title,
-              description: q.description,
-              type: q.type,
-              required: q.required || false,
-              order: q.order !== undefined ? q.order : index,
-              options: q.options || null,
-              validation: q.validation || null,
-            })),
+            create: questions.map((q: any, index: number) => {
+              if (!q.title || !q.type || !Object.values(QuestionType).includes(q.type)) {
+                throw new Error(`Pregunta inválida en la creación: ${JSON.stringify(q)}`);
+              }
+              return {
+                title: q.title,
+                description: q.description ?? null,
+                type: q.type as QuestionType,
+                required: q.required || false,
+                order: q.order ?? index,
+                options: q.options ?? null,
+                validation: q.validation ?? null,
+              };
+            }),
           },
         }),
       },
@@ -130,17 +114,18 @@ export async function POST(request: Request) {
       },
     });
 
-
-    return NextResponse.json(newSurvey, { status: 201 });
+    return NextResponse.json(newSurvey, { status: 201, headers: withCors(origin) });
   } catch (error: any) {
     console.error('Error creating survey:', error);
+
     if (error.code === 'P2002' && error.meta?.target?.includes('customLink')) {
-      return NextResponse.json({ message: 'El enlace personalizado ya está en uso' }, { status: 409 });
+      return NextResponse.json({ message: 'El enlace personalizado ya está en uso' }, { status: 409, headers: withCors(origin) });
     }
-    // Added a more specific error for P2003 (Foreign Key Constraint Violation)
+
     if (error.code === 'P2003' && error.meta?.field_name?.includes('userId')) {
-      return NextResponse.json({ message: 'El ID de usuario proporcionado no existe.' }, { status: 404 });
+      return NextResponse.json({ message: 'El ID de usuario proporcionado no existe.' }, { status: 404, headers: withCors(origin) });
     }
-    return NextResponse.json({ message: 'Error al crear la encuesta' }, { status: 500 });
+
+    return NextResponse.json({ message: 'Error al crear la encuesta', details: error.message }, { status: 500, headers: withCors(origin) });
   }
 }

@@ -1,145 +1,129 @@
 // app/api/surveys/[surveyId]/questions/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient, QuestionType } from '@prisma/client'
-const prisma = new PrismaClient()
+import { PrismaClient, QuestionType } from '@prisma/client';
+const prisma = new PrismaClient();
+
 const allowedOrigins = [
   'http://localhost:3000',
   'https://survey-next-git-main-intermaritime.vercel.app',
   'https://surveys.intermaritime.org',
-]
+];
 
 // Función auxiliar para CORS
 function withCors(origin: string | null) {
-  const isAllowed = origin && allowedOrigins.includes(origin)
+  const isAllowed = origin && allowedOrigins.includes(origin);
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token',
     'Access-Control-Allow-Credentials': 'true',
-  }
+  };
 }
 
 // Preflight request (OPTIONS)
 export async function OPTIONS(req: NextRequest) {
-  const origin = req.headers.get('origin')
-  return new NextResponse(null, {
-    status: 200,
-    headers: withCors(origin),
-  })
+  const origin = req.headers.get('origin');
+  return new NextResponse(null, { status: 200, headers: withCors(origin) });
 }
 
-// GET /api/surveys/[surveyId]/questions - Obtener todas las preguntas de una encuesta específica
-export async function GET(request: Request, { params }: { params: { surveyId: string } }) {
-  const origin = request.headers.get('origin')
-  const resolvedParams = await params; 
-  const { surveyId } = resolvedParams;
+// GET /api/surveys/[surveyId]/questions
+export async function GET(request: NextRequest, { params }: { params: { surveyId: string } }) {
+  const origin = request.headers.get('origin');
+  const { surveyId } = params;
   try {
     const questions = await prisma.question.findMany({
       where: { surveyId },
       orderBy: { order: 'asc' },
     });
 
-    if (!questions) {
-      return NextResponse.json([], { status: 200 }); 
-    }
-
-    // *** YA NO SE NECESITA PARSEAR: Prisma devuelve los campos Json directamente como JS objects/arrays ***
-    return NextResponse.json(questions, { status: 200 });
+    return NextResponse.json(questions || [], { status: 200, headers: withCors(origin) });
   } catch (error) {
     console.error(`Error fetching questions for survey ${surveyId}:`, error);
-    return NextResponse.json({ message: 'Error al obtener las preguntas' }, { status: 500 });
+    return NextResponse.json({ message: 'Error al obtener las preguntas' }, { status: 500, headers: withCors(origin) });
   }
 }
 
-// POST /api/surveys/[surveyId]/questions - Sincronizar (crear/actualizar/eliminar) preguntas en lote
-export async function POST(request: Request, { params }: { params: { surveyId: string } }) {
-  const origin = request.headers.get('origin')
-  const resolvedParams = await params;
-  const { surveyId } = resolvedParams;
+// POST /api/surveys/[surveyId]/questions
+export async function POST(request: NextRequest, { params }: { params: { surveyId: string } }) {
+  const origin = request.headers.get('origin');
+  const { surveyId } = params;
+
   try {
     const body = await request.json();
-    const clientQuestions: any[] = body.questions || []; // Ahora esperamos un ARRAY de preguntas
+    const clientQuestions: any[] = body.questions || [];
+
+    // Validación preliminar de todas las preguntas antes de la transacción
+    for (const q of clientQuestions) {
+      if (!q.title || !q.type || q.order === undefined || q.order === null) {
+        return NextResponse.json(
+          { message: `Faltan campos obligatorios en una pregunta: title, type, order. Pregunta: ${JSON.stringify(q)}` },
+          { status: 400, headers: withCors(origin) }
+        );
+      }
+      if (!Object.values(QuestionType).includes(q.type)) {
+        return NextResponse.json(
+          { message: `Tipo de pregunta inválido para la pregunta "${q.title}": ${q.type}` },
+          { status: 400, headers: withCors(origin) }
+        );
+      }
+    }
 
     // Validar que la encuesta exista
     const surveyExists = await prisma.survey.findUnique({ where: { id: surveyId } });
     if (!surveyExists) {
-      return NextResponse.json({ message: 'La encuesta especificada no existe' }, { status: 404 });
+      return NextResponse.json({ message: 'La encuesta especificada no existe' }, { status: 404, headers: withCors(origin) });
     }
 
-    // Obtener IDs de preguntas existentes para esta encuesta
+    // IDs de preguntas existentes en DB
     const existingDbQuestions = await prisma.question.findMany({
-      where: { surveyId: surveyId },
+      where: { surveyId },
       select: { id: true },
     });
     const existingDbQuestionIds = new Set(existingDbQuestions.map(q => q.id));
-    
-    // IDs de preguntas enviadas por el cliente que ya existen (tienen 'id')
     const clientExistingQuestionIds = new Set(clientQuestions.filter(q => q.id).map(q => q.id));
 
-    // 1. Eliminar preguntas que estaban en la DB pero no fueron enviadas por el cliente
+    // Eliminar preguntas no enviadas por el cliente
     const questionsToDeleteIds = existingDbQuestions
       .filter(dbQ => !clientExistingQuestionIds.has(dbQ.id))
       .map(dbQ => dbQ.id);
 
     if (questionsToDeleteIds.length > 0) {
-      await prisma.question.deleteMany({
-        where: { id: { in: questionsToDeleteIds } },
-      });
+      await prisma.question.deleteMany({ where: { id: { in: questionsToDeleteIds } } });
     }
 
-    // 2. Crear nuevas preguntas y actualizar las existentes
-    const transactionOperations = clientQuestions.map(q => {
-      // Validación básica para cada pregunta
-      if (!q.title || !q.type || q.order === undefined || q.order === null) {
-        throw new Error(`Faltan campos obligatorios en una pregunta: title, type, order. Pregunta: ${JSON.stringify(q)}`);
-      }
-      
-      // Asegúrate de que el tipo de pregunta sea válido
-      if (!Object.values(QuestionType).includes(q.type)) {
-        throw new Error(`Tipo de pregunta inválido para la pregunta "${q.title}": ${q.type}`);
-      }
-
-      const questionData: any = { // Usamos 'any' temporalmente para evitar errores de tipo con Prisma Json
+    // Crear o actualizar preguntas
+    const transactionOps = clientQuestions.map(q => {
+      const data: any = {
         title: q.title,
         description: q.description || null,
         type: q.type,
         required: q.required || false,
         order: q.order,
-        options: q.options || null, // *** YA NO SE NECESITA STRINGIFY ***
-        validation: q.validation || null, // *** YA NO SE NECESITA STRINGIFY ***
-        surveyId: surveyId,
+        options: q.options || null,
+        validation: q.validation || null,
+        surveyId,
       };
 
       if (q.id && existingDbQuestionIds.has(q.id)) {
-        // Actualizar pregunta existente
-        return prisma.question.update({
-          where: { id: q.id },
-          data: questionData,
-        });
+        return prisma.question.update({ where: { id: q.id }, data });
       } else {
-        // Crear nueva pregunta
-        return prisma.question.create({
-          data: questionData,
-        });
+        return prisma.question.create({ data });
       }
     });
 
-    // Ejecutar todas las operaciones en una transacción
-    await prisma.$transaction(transactionOperations);
+    await prisma.$transaction(transactionOps);
 
-    // Finalmente, devolver todas las preguntas actualizadas (incluyendo los nuevos IDs)
     const updatedQuestions = await prisma.question.findMany({
-      where: { surveyId: surveyId },
+      where: { surveyId },
       orderBy: { order: 'asc' },
     });
 
-    // *** YA NO SE NECESITA PARSEAR: Prisma devuelve los campos Json directamente ***
-    return NextResponse.json(updatedQuestions, { status: 200 });
-  } catch (error: any) {
+    return NextResponse.json(updatedQuestions, { status: 200, headers: withCors(origin) });
+  } catch (error) {
     console.error(`Error synchronizing questions for survey ${surveyId}:`, error);
-    if (error.message.includes('Faltan campos obligatorios') || error.message.includes('Tipo de pregunta inválido')) {
-        return NextResponse.json({ message: error.message }, { status: 400 });
-    }
-    return NextResponse.json({ message: 'Error al sincronizar las preguntas de la encuesta' }, { status: 500 });
+    return NextResponse.json(
+      { message: 'Error al sincronizar las preguntas de la encuesta' },
+      { status: 500, headers: withCors(origin) }
+    );
   }
 }
