@@ -138,5 +138,5 @@ export default function SurveyPublicPage() {
   }
 
   // Si la encuesta y las preguntas se cargaron correctamente, pásalas a SurveyForm
-  return <SurveyForm survey={surveyData.survey} questions={surveyData.questions} />
+  return <SurveyForm survey={surveyData?.survey} questions={surveyData.questions} />
 }
