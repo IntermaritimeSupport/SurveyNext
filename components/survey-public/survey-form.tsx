@@ -21,7 +21,7 @@ interface PublicSurvey {
   isAnonymous: boolean
   showProgress: boolean
   allowMultipleResponses: boolean
-  status?: SurveyStatus
+  status: SurveyStatus
   startDate?: string
   endDate?: string
 }
@@ -98,7 +98,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
         question.type !== PrismaQuestionType.FILE_UPLOAD)
 
     if (question.required && isAnswerEmpty) {
-      return "Esta pregunta es obligatoria."
+      return "This question is required."
     }
 
     if (!question.required && isAnswerEmpty) {
@@ -109,7 +109,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
       case PrismaQuestionType.EMAIL:
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
         if (typeof answerValue === "string" && !emailRegex.test(answerValue)) {
-          return "Ingresa un email válido."
+          return "Please enter a valid email."
         }
         break
 
@@ -117,10 +117,10 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
       case PrismaQuestionType.TEXTAREA:
         if (typeof answerValue === "string") {
           if (question.validation?.minLength && answerValue.length < question.validation.minLength) {
-            return `Mínimo ${question.validation.minLength} caracteres.`
+            return `Minimum ${question.validation.minLength} characters.`
           }
           if (question.validation?.maxLength && answerValue.length > question.validation.maxLength) {
-            return `Máximo ${question.validation.maxLength} caracteres.`
+            return `Maximum ${question.validation.maxLength} characters.`
           }
         }
         break
@@ -128,13 +128,13 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
       case PrismaQuestionType.NUMBER:
         const numValue = Number(answerValue)
         if (isNaN(numValue)) {
-          return "Debe ser un número válido."
+          return "Must be a valid number."
         }
         if (question.validation?.min && numValue < question.validation.min) {
-          return `El valor mínimo es ${question.validation.min}.`
+          return `Minimum value is ${question.validation.min}.`
         }
         if (question.validation?.max && numValue > question.validation.max) {
-          return `El valor máximo es ${question.validation.max}.`
+          return `Maximum value is ${question.validation.max}.`
         }
         break
 
@@ -142,29 +142,29 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
         const urlRegex =
           /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/[a-zA-Z0-9]+\.[^\s]{2,}|[a-zA-Z0-9]+\.[^\s]{2,})$/i
         if (typeof answerValue === "string" && !urlRegex.test(answerValue)) {
-          return "Ingresa una URL válida."
+          return "Please enter a valid URL."
         }
         break
 
       case PrismaQuestionType.PHONE:
         const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/im
         if (typeof answerValue === "string" && !phoneRegex.test(answerValue)) {
-          return "Ingresa un número de teléfono válido."
+          return "Please enter a valid phone number."
         }
         break
 
       case PrismaQuestionType.DATE:
         if (typeof answerValue === "string" && !/^\d{4}-\d{2}-\d{2}$/.test(answerValue)) {
-          return `Formato de fecha inválido (YYYY-MM-DD).`
+          return `Invalid date format (YYYY-MM-DD).`
         }
         if (typeof answerValue === "string" && isNaN(new Date(answerValue).getTime())) {
-          return `Formato de fecha inválido.`
+          return `Invalid date format.`
         }
         break
 
       case PrismaQuestionType.TIME:
         if (typeof answerValue === "string" && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(answerValue)) {
-          return `Formato de hora inválido (HH:mm).`
+          return `Invalid time format (HH:mm).`
         }
         break
 
@@ -172,18 +172,18 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
       case PrismaQuestionType.DROPDOWN:
         const dropdownOptions = (question.options as QuestionOption[] | null) || []
         if (!dropdownOptions.some((opt) => opt.value === answerValue)) {
-          return "La opción seleccionada es inválida."
+          return "The selected option is invalid."
         }
         break
 
       case PrismaQuestionType.CHECKBOXES:
         const checkboxOptions = (question.options as QuestionOption[] | null) || []
         if (!Array.isArray(answerValue)) {
-          return "Debe seleccionar una o más opciones."
+          return "Must select one or more options."
         }
         const validCheckboxValues = checkboxOptions.map((opt) => opt.value)
         if (!answerValue.every((val: any) => validCheckboxValues.includes(val))) {
-          return "Una o más opciones seleccionadas son inválidas."
+          return "One or more selected options are invalid."
         }
         break
 
@@ -191,24 +191,24 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
       case PrismaQuestionType.SCALE:
         const ratingScaleValue = Number(answerValue)
         if (isNaN(ratingScaleValue)) {
-          return "Debe ser un número válido."
+          return "Must be a valid number."
         }
         const minVal = question.validation?.min || 1
         const maxVal = question.validation?.max || (question.type === PrismaQuestionType.RATING ? 5 : 10)
         if (ratingScaleValue < minVal || ratingScaleValue > maxVal) {
-          return `Debe estar entre ${minVal} y ${maxVal}.`
+          return `Must be between ${minVal} and ${maxVal}.`
         }
         break
 
       case PrismaQuestionType.FILE_UPLOAD:
         if (typeof answerValue !== "object" || answerValue === null || !answerValue.fileName || !answerValue.fileUrl) {
-          return "Debe adjuntar un archivo válido."
+          return "Must attach a valid file."
         }
         break
 
       case PrismaQuestionType.SIGNATURE:
         if (typeof answerValue !== "string" || answerValue.length < 10) {
-          return "La firma es inválida."
+          return "The signature is invalid."
         }
         break
 
@@ -219,7 +219,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
           Array.isArray(answerValue) ||
           Object.keys(answerValue).length === 0
         ) {
-          return "Formato de respuesta de matriz inválido."
+          return "Invalid matrix response format."
         }
         break
     }
@@ -242,12 +242,12 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
   const validateEmailInput = (email: string): string | null => {
     if (isEmailRequired && !email.trim()) {
-      return "El email es obligatorio."
+      return "Email is required."
     }
     if (email.trim()) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(email)) {
-        return "Ingresa un email válido."
+        return "Please enter a valid email."
       }
     }
     return null
@@ -281,7 +281,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
     if (hasPageErrors) {
       setValidationErrors(newPageErrors)
-      setSubmissionError("Por favor, corrige los errores en las preguntas obligatorias.")
+      setSubmissionError("Please correct the errors in the required questions.")
       return
     }
 
@@ -318,7 +318,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
     const emailError = validateEmailInput(respondentEmail)
     if (emailError) {
       setValidationErrors((prev) => new Map(prev).set("email", emailError))
-      setSubmissionError("Por favor, corrige los errores en la información de contacto.")
+      setSubmissionError("Please correct the errors in the contact information.")
       return
     }
 
@@ -335,7 +335,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
     if (hasFinalErrors) {
       setValidationErrors(finalErrors)
-      setSubmissionError("Por favor, corrige los errores en las preguntas antes de enviar.")
+      setSubmissionError("Please correct the errors in the questions before submitting.")
       return
     }
 
@@ -366,13 +366,13 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
       if (!apiResponse.ok) {
         const errorData = await apiResponse.json()
-        throw new Error(errorData.message || "Error desconocido al enviar la encuesta.")
+        throw new Error(errorData.message || "Unknown error while submitting the survey.")
       }
 
       setIsCompleted(true)
     } catch (error: any) {
       console.error("SurveyForm: Error submitting survey:", error)
-      setSubmissionError(error.message || "Error al enviar la encuesta. Inténtalo de nuevo.")
+      setSubmissionError(error.message || "Error submitting the survey. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -387,22 +387,22 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
               <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-3 sm:mb-4">
-              ¡Gracias por tu participación!
+              Thank you for your participation!
             </h2>
             <p className="text-sm sm:text-base text-slate-600 mb-4 sm:mb-6">
-              Tu respuesta ha sido enviada exitosamente.
+              Your response has been submitted successfully.
             </p>
             <div className="bg-slate-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
               <p className="text-xs sm:text-sm text-slate-600">
-                <strong>Encuesta:</strong> {survey.title}
+                <strong>Survey:</strong> {survey.title}
                 <br />
-                <strong>Completada:</strong> {new Date().toLocaleString()}
+                <strong>Completed:</strong> {new Date().toLocaleString()}
                 <br />
-                <strong>Preguntas respondidas:</strong> {Object.keys(currentAnswers).length}
+                <strong>Questions answered:</strong> {Object.keys(currentAnswers).length}
               </p>
             </div>
             <Button onClick={() => (window.location.href = "/")} variant="outline" className="w-full bg-transparent">
-              Volver al Inicio
+              Back to Home
             </Button>
           </CardContent>
         </Card>
@@ -451,11 +451,11 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                     </svg>
                   </div>
                   <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">
-                    Información de Contacto
+                    Contact Information
                     {isEmailRequired && <span className="text-red-500 ml-1">*</span>}
                   </h3>
                   <p className="text-sm sm:text-base text-slate-600">
-                    Por favor, proporciona tu email para completar la encuesta.
+                    Please provide your email to complete the survey.
                   </p>
                 </div>
 
@@ -475,7 +475,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                         return newErrors
                       })
                     }}
-                    placeholder="tu@email.com"
+                    placeholder="your@email.com"
                     className={`mt-1 ${validationErrors.has("email") ? "border-red-300 focus:border-red-300 focus:ring-red-200" : "focus:border-blue-500 focus:ring-blue-200"}`}
                   />
                   {validationErrors.get("email") && (
@@ -507,7 +507,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
               </div>
             ) : (
               <Alert variant="destructive">
-                <AlertDescription>No se pudieron cargar las preguntas de la encuesta.</AlertDescription>
+                <AlertDescription>Could not load the survey questions.</AlertDescription>
               </Alert>
             )}
 
@@ -533,13 +533,13 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
               className="w-full sm:w-auto bg-white hover:bg-slate-50 border-slate-300 order-2 sm:order-1"
             >
               <ChevronLeft className="h-4 w-4 mr-2" />
-              Anterior
+              Previous
             </Button>
 
             <div className="text-xs sm:text-sm text-slate-500 bg-white px-2 sm:px-3 py-1 rounded-full border border-slate-200 order-1 sm:order-2 text-center">
               {isShowingEmailStep
-                ? `Paso ${currentStep} de ${totalSteps}: Información de Contacto`
-                : `Paso ${currentStep} de ${totalSteps}: Preguntas ${startIndex + 1}-${endIndex}`}
+                ? `Step ${currentStep} of ${totalSteps}: Contact Information`
+                : `Step ${currentStep} of ${totalSteps}: Questions ${startIndex + 1}-${endIndex}`}
             </div>
 
             <Button
@@ -549,16 +549,16 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...
                 </>
               ) : !enablePagination || (isLastQuestionPage && !isShowingEmailStep) ? (
                 <>
                   <Send className="h-4 w-4 mr-2" />
-                  Enviar
+                  Submit
                 </>
               ) : (
                 <>
-                  Siguiente
+                  Next
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </>
               )}

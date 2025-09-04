@@ -87,7 +87,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
           <Input
             value={localValue as string}
             onChange={(e) => handleValueChange(e.target.value)}
-            placeholder="Tu respuesta..."
+            placeholder="Your answer..."
             className={error ? "border-red-300" : ""}
             maxLength={question.validation?.maxLength}
           />
@@ -98,7 +98,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
           <Textarea
             value={localValue as string}
             onChange={(e) => handleValueChange(e.target.value)}
-            placeholder="Tu respuesta..."
+            placeholder="Your answer..."
             rows={4}
             className={error ? "border-red-300" : ""}
             maxLength={question.validation?.maxLength}
@@ -111,7 +111,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
             type="email"
             value={localValue as string}
             onChange={(e) => handleValueChange(e.target.value)}
-            placeholder="tu@email.com"
+            placeholder="your@email.com"
             className={error ? "border-red-300" : ""}
           />
         )
@@ -146,7 +146,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
             />
             {!localValue && (
               <div className="absolute left-10 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none text-sm">
-                Selecciona una fecha
+                Select a date
               </div>
             )}
           </div>
@@ -187,7 +187,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
             type="url"
             value={localValue as string}
             onChange={(e) => handleValueChange(e.target.value)}
-            placeholder="https://ejemplo.com"
+            placeholder="https://example.com"
             className={error ? "border-red-300" : ""}
           />
         )
@@ -197,7 +197,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
         return (
           <Select value={localValue as string} onValueChange={handleValueChange}>
             <SelectTrigger className={error ? "border-red-300" : ""}>
-              <SelectValue placeholder="Selecciona una opción..." />
+              <SelectValue placeholder="Select a option..." />
             </SelectTrigger>
             <SelectContent>
               {Array.isArray(optionsDropdown) &&

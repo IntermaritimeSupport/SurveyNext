@@ -7,8 +7,40 @@ import { Button } from "@/components/ui/button"
 import { PlusCircle, BarChart3, Users } from "lucide-react"
 import Link from "next/link"
 import { BrowserInfoCard } from "@/components/admin/BrowserInfo"
+import { Separator } from "@radix-ui/react-dropdown-menu"
+import { SurveyStatusPieChart } from "@/components/charts/total-surveys-pie-chart"
+import { SurveyResponsesBarChart } from "@/components/charts/chart-bar-interactive"
+import { APISurveyWithQuestions } from "./reports/page"
+import { useEffect, useState } from "react"
 
 export default function AdminDashboard() {
+  const [allSurveys, setAllSurveys] = useState<APISurveyWithQuestions[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchAllSurveyData = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        // Asume que esta API puede devolver las preguntas y el conteo
+        // Si tu API no devuelve todas las preguntas con responsesSummary,
+        // necesitarías endpoints adicionales o un `include` más profundo.
+        const response = await fetch("/api/surveys?include=_count&include=questions")
+        if (!response.ok) {
+          throw new Error(`Error al cargar datos de encuestas: ${response.status}`)
+        }
+        const data: APISurveyWithQuestions[] = await response.json()
+        setAllSurveys(data)
+      } catch (err: any) {
+        console.error("Error fetching all survey data for reports:", err)
+        setError("Error al cargar los datos para los reportes. Verifica que la API esté funcionando correctamente.")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAllSurveyData()
+  }, [])
   const quickActions = [
     {
       title: "Crear Nueva Encuesta",
@@ -52,6 +84,21 @@ export default function AdminDashboard() {
 
         {/* Stats */}
         <DashboardStats />
+
+        <Separator />
+
+        {/* Sección de Gráficos de Alto Nivel */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-bold text-gray-800">Análisis General</h2>
+          <p className="text-gray-600">Gráficos que ofrecen una vista de alto nivel de tus datos.</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SurveyStatusPieChart surveys={allSurveys} />
+            <SurveyResponsesBarChart surveys={allSurveys} />
+          </div>
+        </section>
+
+        <Separator />
+
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

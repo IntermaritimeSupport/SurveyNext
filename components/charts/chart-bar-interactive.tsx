@@ -15,10 +15,10 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { APISurvey } from "@/app/admin/responses/page"
+import { APISurveyWithQuestions } from "@/app/admin/reports/page"
 
 interface SurveyResponsesBarChartProps {
-  surveys: APISurvey[];
+  surveys: APISurveyWithQuestions[]
 }
 
 export function SurveyResponsesBarChart({ surveys }: SurveyResponsesBarChartProps) {
@@ -74,7 +74,7 @@ export function SurveyResponsesBarChart({ surveys }: SurveyResponsesBarChartProp
 
   if (chartData.length === 0) {
     return (
-      <Card className="col-span-full">
+      <Card className="col-span-1">
         <CardHeader>
           <CardTitle>Respuestas por Encuesta</CardTitle>
           <CardDescription>Visualización del número de respuestas recibidas por cada encuesta.</CardDescription>

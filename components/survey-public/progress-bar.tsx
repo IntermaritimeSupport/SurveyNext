@@ -14,7 +14,7 @@ export function ProgressBar({ current, total, showNumbers = true }: ProgressBarP
       <div className="flex justify-between items-center">
         {showNumbers && (
           <span className="text-sm text-slate-600">
-            Pregunta {current} de {total}
+            Question {current} de {total}
           </span>
         )}
         <span className="text-sm font-medium text-slate-700">{percentage}%</span>

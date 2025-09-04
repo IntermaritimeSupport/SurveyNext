@@ -1,13 +1,39 @@
 "use client"
-import { Label, Pie, PieChart, Sector, Bar, BarChart, XAxis, YAxis, CartesianGrid, Area, AreaChart } from "recharts"
+
+import {
+  Label,
+  Pie,
+  PieChart,
+  Sector,
+  Bar,
+  BarChart,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Area,
+  AreaChart,
+} from "recharts"
 import type { PieSectorDataItem } from "recharts/types/polar/Pie"
 import { useMemo } from "react"
 import { Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { type ChartConfig, ChartContainer, ChartStyle, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartStyle,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
 import { Badge } from "@/components/ui/badge"
+import { APISurveyWithQuestions } from "@/app/admin/reports/page"
 
 // =========================================================================
 // INTERFACES
@@ -34,7 +60,8 @@ interface ChartQuestionData {
 
 interface SurveyQuestionResponsesChartProps {
   surveyTitle: string
-  questions: ChartQuestionData[]
+  questions?: ChartQuestionData[]
+  surveys?: APISurveyWithQuestions[]
   loading?: boolean
   error?: string | null
 }
@@ -75,7 +102,7 @@ function QuestionChart({ question }: QuestionChartProps) {
         option: item.option,
         count: item.count,
         key: `option${index}`,
-        fill: vibrantPalette[index % vibrantPalette.length], // Direct fill property for better color control
+        fill: vibrantPalette[index % vibrantPalette.length],
       }))
   }, [question])
 
@@ -94,7 +121,10 @@ function QuestionChart({ question }: QuestionChartProps) {
     return config
   }, [chartData])
 
-  const totalSelections = useMemo(() => chartData.reduce((acc, item) => acc + item.count, 0), [chartData])
+  const totalSelections = useMemo(
+    () => chartData.reduce((acc, item) => acc + item.count, 0),
+    [chartData],
+  )
 
   if (chartData.length === 0) {
     return (
@@ -118,14 +148,23 @@ function QuestionChart({ question }: QuestionChartProps) {
   const renderChart = () => {
     const hasLongLabels = chartData.some((d) => d.option.length > 15)
 
-    // Use bar chart for better readability with long labels or many options
     if (hasLongLabels || chartData.length > 5) {
       return (
         <ChartContainer config={chartConfig} className="h-[200px] w-full">
-          <BarChart data={chartData} layout="horizontal" margin={{ left: 60, right: 20, top: 10, bottom: 10 }}>
+          <BarChart
+            data={chartData}
+            layout="horizontal"
+            margin={{ left: 60, right: 20, top: 10, bottom: 10 }}
+          >
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis type="number" className="text-xs" />
-            <YAxis type="category" dataKey="option" className="text-xs" width={50} tick={{ fontSize: 10 }} />
+            <YAxis
+              type="category"
+              dataKey="option"
+              className="text-xs"
+              width={50}
+              tick={{ fontSize: 10 }}
+            />
             <ChartTooltip content={<ChartTooltipContent />} />
             <Bar dataKey="count" radius={[0, 4, 4, 0]} />
           </BarChart>
@@ -133,11 +172,13 @@ function QuestionChart({ question }: QuestionChartProps) {
       )
     }
 
-    // Use area chart for rating scales to show distribution
     if (question.type === "RATING" || question.type === "SCALE") {
       return (
         <ChartContainer config={chartConfig} className="h-[200px] w-full">
-          <AreaChart data={chartData} margin={{ left: 20, right: 20, top: 10, bottom: 10 }}>
+          <AreaChart
+            data={chartData}
+            margin={{ left: 20, right: 20, top: 10, bottom: 10 }}
+          >
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis dataKey="option" className="text-xs" />
             <YAxis className="text-xs" />
@@ -155,9 +196,11 @@ function QuestionChart({ question }: QuestionChartProps) {
       )
     }
 
-    // Default to enhanced pie chart for multiple choice
     return (
-      <ChartContainer config={chartConfig} className="mx-auto aspect-square h-[200px] w-[200px]">
+      <ChartContainer
+        config={chartConfig}
+        className="mx-auto aspect-square h-[200px] w-[200px]"
+      >
         <PieChart>
           <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
           <Pie
@@ -171,7 +214,12 @@ function QuestionChart({ question }: QuestionChartProps) {
             activeIndex={-1}
             activeShape={({ outerRadius = 0, ...props }: PieSectorDataItem) => (
               <g>
-                <Sector {...props} outerRadius={outerRadius + 8} stroke="hsl(var(--foreground))" strokeWidth={2} />
+                <Sector
+                  {...props}
+                  outerRadius={outerRadius + 8}
+                  stroke="hsl(var(--foreground))"
+                  strokeWidth={2}
+                />
               </g>
             )}
           >
@@ -181,11 +229,24 @@ function QuestionChart({ question }: QuestionChartProps) {
                   return null
                 }
                 return (
-                  <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                    <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-2xl font-bold">
+                  <text
+                    x={viewBox.cx}
+                    y={viewBox.cy}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                  >
+                    <tspan
+                      x={viewBox.cx}
+                      y={viewBox.cy}
+                      className="fill-foreground text-2xl font-bold"
+                    >
                       {totalSelections.toLocaleString()}
                     </tspan>
-                    <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 20} className="fill-muted-foreground text-sm">
+                    <tspan
+                      x={viewBox.cx}
+                      y={(viewBox.cy || 0) + 20}
+                      className="fill-muted-foreground text-sm"
+                    >
                       Total
                     </tspan>
                   </text>
@@ -212,7 +273,9 @@ function QuestionChart({ question }: QuestionChartProps) {
           </span>
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-1 justify-center items-center p-4 pt-0">{renderChart()}</CardContent>
+      <CardContent className="flex flex-1 justify-center items-center p-4 pt-0">
+        {renderChart()}
+      </CardContent>
     </Card>
   )
 }
@@ -223,79 +286,47 @@ function QuestionChart({ question }: QuestionChartProps) {
 export function SurveyQuestionResponsesChart({
   surveyTitle,
   questions,
+  surveys,
   loading = false,
   error = null,
 }: SurveyQuestionResponsesChartProps) {
-  const relevantQuestions = useMemo(
-    () =>
-      questions.filter(
-        (q) =>
-          q.type === "MULTIPLE_CHOICE" ||
-          q.type === "CHECKBOXES" ||
-          q.type === "DROPDOWN" ||
-          q.type === "RATING" ||
-          q.type === "SCALE",
-      ) || [],
-    [questions],
-  )
+  // Mapeamos las preguntas y hacemos cast del type 👇
+const mappedQuestions: ChartQuestionData[] = useMemo(
+  () =>
+    (surveys ?? []) // 🔹 si surveys es null/undefined, usamos array vacío
+      .flatMap((survey) =>
+        survey?.questions?.map((q) => {
+          if (!q.type) return undefined
 
-  const downloadSummary = () => {
-    const summary = {
-      encuesta: surveyTitle,
-      fechaGeneracion: new Date().toLocaleString("es-ES"),
-      totalPreguntas: relevantQuestions.length,
-      preguntas: relevantQuestions.map((question) => {
-        const totalRespuestas = question.responsesSummary?.reduce((acc, item) => acc + item.count, 0) || 0
-        return {
-          titulo: question.title,
-          tipo: question.type.replace("_", " "),
-          totalRespuestas,
-          opciones:
-            question.responsesSummary?.map((item) => ({
-              opcion: item.option,
-              cantidad: item.count,
-              porcentaje: totalRespuestas > 0 ? ((item.count / totalRespuestas) * 100).toFixed(1) + "%" : "0%",
-            })) || [],
-        }
-      }),
-    }
+          return {
+            id: q.id,
+            title: q.title,
+            type: q.type as ChartQuestionData["type"], // 👈 cast explícito
+            order: q.order,
+            ...(q.responsesSummary ? { responsesSummary: q.responsesSummary } : {}),
+          }
+        }) ?? [] // 🔹 si survey.questions es undefined, fallback a []
+      )
+      .filter((q): q is ChartQuestionData => q !== undefined),
+  [surveys],
+)
 
-    let csvContent = "data:text/csv;charset=utf-8,"
+const relevantQuestions: ChartQuestionData[] = useMemo(
+  () =>
+    (questions && questions.length > 0 ? questions : mappedQuestions).filter(
+      (q) =>
+        q.type === "MULTIPLE_CHOICE" ||
+        q.type === "CHECKBOXES" ||
+        q.type === "DROPDOWN" ||
+        q.type === "RATING" ||
+        q.type === "SCALE",
+    ),
+  [questions, mappedQuestions],
+)
 
-    // Header information in separate rows with proper column structure
-    csvContent += "Información General,,,,\n"
-    csvContent += `Encuesta,"${surveyTitle}",,,\n`
-    csvContent += `Fecha de Generación,"${summary.fechaGeneracion}",,,\n`
-    csvContent += `Total de Preguntas,${summary.totalPreguntas},,,\n`
-    csvContent += ",,,,\n" // Empty row separator
 
-    // Column headers for data
-    csvContent += "Pregunta,Tipo,Opción,Cantidad,Porcentaje\n"
 
-    // Data rows with consistent column structure
-    summary.preguntas.forEach((pregunta) => {
-      if (pregunta.opciones.length === 0) {
-        csvContent += `"${pregunta.titulo}","${pregunta.tipo}","Sin respuestas",0,"0%"\n`
-      } else {
-        pregunta.opciones.forEach((opcion) => {
-          csvContent += `"${pregunta.titulo}","${pregunta.tipo}","${opcion.opcion}",${opcion.cantidad},"${opcion.porcentaje}"\n`
-        })
-      }
-    })
 
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement("a")
-    link.setAttribute("href", encodedUri)
-    link.setAttribute(
-      "download",
-      `resumen-encuesta-${surveyTitle.replace(/[^a-z0-9]/gi, "-").toLowerCase()}-${new Date().toISOString().split("T")[0]}.csv`,
-    )
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  // Renderizado de Estados (Cargando, Error, Sin Datos)
   if (loading) {
     return (
       <Card className="col-span-full">
@@ -333,11 +364,14 @@ export function SurveyQuestionResponsesChart({
     return (
       <Card className="col-span-full">
         <CardHeader>
-          <CardTitle>Análisis de Respuestas - {surveyTitle}</CardTitle>
-          <CardDescription>Visualización de datos de respuestas con gráficos adaptativos.</CardDescription>
+          <CardTitle>Análisis de Respuestas</CardTitle>
+          <CardDescription>
+            Visualización de datos de respuestas con gráficos adaptativos.
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex h-[200px] items-center justify-center p-6 text-muted-foreground">
-          La encuesta no tiene preguntas compatibles para análisis gráfico o no hay respuestas disponibles.
+          No hay preguntas compatibles para análisis gráfico o no hay respuestas
+          disponibles.
         </CardContent>
       </Card>
     )
@@ -349,20 +383,12 @@ export function SurveyQuestionResponsesChart({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Análisis de Respuestas - {surveyTitle}</CardTitle>
+              <CardTitle>Análisis de Respuestas</CardTitle>
               <CardDescription>
-                Visualización interactiva de datos de respuestas con gráficos adaptativos.
+                Visualización interactiva de datos de respuestas con gráficos
+                adaptativos.
               </CardDescription>
             </div>
-            <Button
-              onClick={downloadSummary}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 bg-transparent"
-            >
-              <Download className="h-4 w-4" />
-              Descargar Resumen
-            </Button>
           </div>
         </CardHeader>
       </Card>
