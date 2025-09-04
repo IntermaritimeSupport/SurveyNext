@@ -1,10 +1,12 @@
 // app/api/surveys/[surveyId]/questions/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client'
+import cors from '@/app/api/lib/corsMiddleware';
 const prisma = new PrismaClient()
 
 // GET /api/public/survey-questions/[customLink] - Obtener las preguntas de una encuesta por su enlace personalizado
-export async function GET(request: Request, { params }: { params: { customlink: string } }) {
+export async function GET(request: NextRequest, { params }: { params: { customlink: string } }) {
+    await cors(request, NextResponse.next());
   const { customlink } = params;
     console.log(params)
   try {

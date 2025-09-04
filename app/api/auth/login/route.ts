@@ -1,13 +1,15 @@
 // app/api/auth/login/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { PrismaClient } from '@prisma/client'
+import cors from '../../lib/corsMiddleware';
 const prisma = new PrismaClient()
 
 // POST /api/auth/login - Endpoint para iniciar sesión
-export async function POST(request: Request) {
+export async function POST(request: NextRequest, response: NextResponse) {
+  await cors(request, response);
   try {
     const body = await request.json();
     const { email, password } = body;
