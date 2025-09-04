@@ -9,7 +9,7 @@ const cors = initMiddleware(
     origin: (origin: any, callback: any) => {
       const allowedOrigins = [
         "http://localhost:3000",
-        "https://survey-next-git-main-intermaritime.vercel.app/",
+        "https://survey-next-git-main-intermaritime.vercel.app",
         "https://surveys.intermaritime.org",
       ];
       if (!origin || allowedOrigins.includes(origin)) {

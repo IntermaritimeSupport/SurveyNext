@@ -1,8 +1,9 @@
 // app/api/auth/me/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers'; // Para acceder a las cookies
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client'
+import cors from '../../lib/corsMiddleware';
 const prisma = new PrismaClient()
 
 // Define la interfaz para el payload del JWT
@@ -15,7 +16,8 @@ interface JwtPayload {
 }
 
 // GET /api/auth/me - Obtener información del usuario autenticado
-export async function GET(request: Request) {
+export async function GET(request: NextRequest, response: NextResponse) {
+  await cors(request, response);
   try {
     const token = (await cookies()).get('token')?.value; // Intenta obtener el token de la cookie
 
