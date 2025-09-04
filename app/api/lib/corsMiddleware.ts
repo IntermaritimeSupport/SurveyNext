@@ -1,6 +1,6 @@
 // lib/cors.js
 import Cors from 'cors';
-import initMiddleware from './initMiddleware.js';
+import initMiddleware from './initMiddleware';
 
 // Aquí está tu configuración de CORS
 const cors = initMiddleware(
