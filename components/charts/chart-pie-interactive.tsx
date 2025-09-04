@@ -59,7 +59,7 @@ interface ChartQuestionData {
 }
 
 interface SurveyQuestionResponsesChartProps {
-  surveyTitle: string
+  surveyTitle?: string
   questions?: ChartQuestionData[]
   surveys?: APISurveyWithQuestions[]
   loading?: boolean
