@@ -1,5 +1,6 @@
 // src/app/api/client-info/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import cors from '../lib/corsMiddleware';
 
 interface ClientInfo {
   ipAddress: string;
@@ -7,7 +8,8 @@ interface ClientInfo {
   timestamp: string; // Para medir latencia
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest, response: NextResponse) {
+  await cors(request, response);
   try {
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || request.headers.get('host') || 'Desconocida';
     const userAgentFromHeaders = request.headers.get('user-agent') || 'Desconocido';
