@@ -1,10 +1,37 @@
 // app/api/users/[id]/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://survey-next-git-main-intermaritime.vercel.app',
+  'https://surveys.intermaritime.org',
+]
+
+// Función auxiliar para CORS
+function withCors(origin: string | null) {
+  const isAllowed = origin && allowedOrigins.includes(origin)
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token',
+    'Access-Control-Allow-Credentials': 'true',
+  }
+}
+
+// Preflight request (OPTIONS)
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  return new NextResponse(null, {
+    status: 200,
+    headers: withCors(origin),
+  })
+}
+
 // GET /api/users/[id] - Obtener un usuario por ID
 export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const origin = request.headers.get('origin')
   const { id } = params;
   try {
     const user = await prisma.user.findUnique({

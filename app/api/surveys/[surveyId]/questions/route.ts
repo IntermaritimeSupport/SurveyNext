@@ -1,14 +1,37 @@
 // app/api/surveys/[surveyId]/questions/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient, QuestionType } from '@prisma/client'
 const prisma = new PrismaClient()
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://survey-next-git-main-intermaritime.vercel.app',
+  'https://surveys.intermaritime.org',
+]
 
-// *** REMOVIDO: parseJsonSafely, ya que Prisma manejará los campos Json directamente ***
+// Función auxiliar para CORS
+function withCors(origin: string | null) {
+  const isAllowed = origin && allowedOrigins.includes(origin)
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token',
+    'Access-Control-Allow-Credentials': 'true',
+  }
+}
 
+// Preflight request (OPTIONS)
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  return new NextResponse(null, {
+    status: 200,
+    headers: withCors(origin),
+  })
+}
 
 // GET /api/surveys/[surveyId]/questions - Obtener todas las preguntas de una encuesta específica
 export async function GET(request: Request, { params }: { params: { surveyId: string } }) {
-    const resolvedParams = await params; 
+  const origin = request.headers.get('origin')
+  const resolvedParams = await params; 
   const { surveyId } = resolvedParams;
   try {
     const questions = await prisma.question.findMany({
@@ -30,7 +53,8 @@ export async function GET(request: Request, { params }: { params: { surveyId: st
 
 // POST /api/surveys/[surveyId]/questions - Sincronizar (crear/actualizar/eliminar) preguntas en lote
 export async function POST(request: Request, { params }: { params: { surveyId: string } }) {
-    const resolvedParams = await params;
+  const origin = request.headers.get('origin')
+  const resolvedParams = await params;
   const { surveyId } = resolvedParams;
   try {
     const body = await request.json();

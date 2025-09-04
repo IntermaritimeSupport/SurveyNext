@@ -1,6 +1,32 @@
 // src/app/api/client-info/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import cors from '../lib/corsMiddleware';
+
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://survey-next-git-main-intermaritime.vercel.app',
+  'https://surveys.intermaritime.org',
+]
+
+// Función auxiliar para CORS
+function withCors(origin: string | null) {
+  const isAllowed = origin && allowedOrigins.includes(origin)
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token',
+    'Access-Control-Allow-Credentials': 'true',
+  }
+}
+
+// Preflight request (OPTIONS)
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  return new NextResponse(null, {
+    status: 200,
+    headers: withCors(origin),
+  })
+}
+
 
 interface ClientInfo {
   ipAddress: string;
@@ -9,7 +35,7 @@ interface ClientInfo {
 }
 
 export async function GET(request: NextRequest, response: NextResponse) {
-  await cors(request, response);
+  const origin = request.headers.get('origin')
   try {
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || request.headers.get('host') || 'Desconocida';
     const userAgentFromHeaders = request.headers.get('user-agent') || 'Desconocido';

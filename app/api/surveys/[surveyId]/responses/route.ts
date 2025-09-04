@@ -1,7 +1,34 @@
 // app/api/surveys/[surveyId]/responses/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient, QuestionType, SurveyStatus } from '@prisma/client'
 const prisma = new PrismaClient()
+
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://survey-next-git-main-intermaritime.vercel.app',
+  'https://surveys.intermaritime.org',
+]
+
+// Función auxiliar para CORS
+function withCors(origin: string | null) {
+  const isAllowed = origin && allowedOrigins.includes(origin)
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token',
+    'Access-Control-Allow-Credentials': 'true',
+  }
+}
+
+// Preflight request (OPTIONS)
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  return new NextResponse(null, {
+    status: 200,
+    headers: withCors(origin),
+  })
+}
+
 
 interface QuestionOption {
   value: string;
@@ -84,6 +111,7 @@ export async function GET(request: Request, { params }: { params: { surveyId: st
 }
 
 export async function POST(request: Request, { params }: { params: { surveyId: string | Promise<string> } }) {
+  const origin = request.headers.get('origin')
   const resolvedParams = await params;
   const surveyId: string = resolvedParams.surveyId as string;
 

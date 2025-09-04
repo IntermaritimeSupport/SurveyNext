@@ -1,10 +1,36 @@
 // app/api/surveys/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient, SurveyStatus } from '@prisma/client'
 const prisma = new PrismaClient()
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://survey-next-git-main-intermaritime.vercel.app',
+  'https://surveys.intermaritime.org',
+]
+
+// Función auxiliar para CORS
+function withCors(origin: string | null) {
+  const isAllowed = origin && allowedOrigins.includes(origin)
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token',
+    'Access-Control-Allow-Credentials': 'true',
+  }
+}
+
+// Preflight request (OPTIONS)
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  return new NextResponse(null, {
+    status: 200,
+    headers: withCors(origin),
+  })
+}
 
 // GET /api/surveys - Obtener todas las encuestas
 export async function GET(request: Request) {
+  const origin = request.headers.get('origin')
   try {
     const surveys = await prisma.survey.findMany({
       orderBy: {
@@ -47,6 +73,7 @@ export async function GET(request: Request) {
 
 // POST /api/surveys - Crear una nueva encuesta
 export async function POST(request: Request) {
+  const origin = request.headers.get('origin')
   try {
     const body = await request.json();
     const {

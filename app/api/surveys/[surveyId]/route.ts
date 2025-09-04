@@ -1,10 +1,36 @@
 // app/api/surveys/[surveyId]/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient, QuestionType, SurveyStatus } from '@prisma/client'
 const prisma = new PrismaClient()
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://survey-next-git-main-intermaritime.vercel.app',
+  'https://surveys.intermaritime.org',
+]
+
+// Función auxiliar para CORS
+function withCors(origin: string | null) {
+  const isAllowed = origin && allowedOrigins.includes(origin)
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token',
+    'Access-Control-Allow-Credentials': 'true',
+  }
+}
+
+// Preflight request (OPTIONS)
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  return new NextResponse(null, {
+    status: 200,
+    headers: withCors(origin),
+  })
+}
 
 // GET /api/surveys/[surveyId] - Obtener una encuesta por ID
 export async function GET(request: Request, { params }: { params: { surveyId: string } }) {
+  const origin = request.headers.get('origin')
   const { surveyId } = await params;
 
   try {
@@ -41,6 +67,7 @@ export async function GET(request: Request, { params }: { params: { surveyId: st
 
 // PUT /api/surveys/[surveyId] - Actualizar una encuesta por ID
 export async function PUT(request: Request, { params }: { params: { surveyId: string | Promise<string> } }) {
+  const origin = request.headers.get('origin')
   // ✅ CORRECCIÓN: Resuelve la promesa de params al principio y asegura el tipo string
   const resolvedParams = await params;
   const surveyId: string = resolvedParams.surveyId as string; // Cast a string para TypeScript
@@ -193,6 +220,7 @@ export async function PUT(request: Request, { params }: { params: { surveyId: st
 
 // ... (DELETE route - también necesita await params)
 export async function DELETE(request: Request, { params }: { params: { surveyId: string } }) {
+  const origin = request.headers.get('origin')
   const { surveyId } = params; 
 
   try {
