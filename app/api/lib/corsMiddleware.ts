@@ -10,7 +10,7 @@ const cors = initMiddleware(
       const allowedOrigins = [
         "http://localhost:3000",
         "https://survey-next-git-main-intermaritime.vercel.app/",
-        "https://https://surveys.intermaritime.org",
+        "https://surveys.intermaritime.org",
       ];
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
