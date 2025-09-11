@@ -26,13 +26,20 @@ export async function OPTIONS(req: NextRequest) {
   return new NextResponse(null, { status: 200, headers: withCors(origin) });
 }
 
+interface ResponseDetailPageProps {
+  params: Promise<{
+    surveyId: string;
+    questionId: string;
+  }>;
+}
+
 // PUT /api/surveys/[surveyId]/questions/[questionId]
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { surveyId: string; questionId: string } }
+  { params: resolvedParams }: ResponseDetailPageProps
 ) {
   const origin = request.headers.get('origin');
-  const { surveyId, questionId } = params;
+  const { surveyId, questionId } = await resolvedParams;
 
   try {
     const body = await request.json();

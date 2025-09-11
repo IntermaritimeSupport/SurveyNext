@@ -87,13 +87,17 @@ function convertToCsv(data: any[]): string {
   return csv
 }
 
+interface ResponseDetailPageProps {
+  params: Promise<{
+    surveyId: string;
+  }>;
+}
 // GET /api/export/survey-responses/[surveyId]
 export async function GET(
-  request: NextRequest,
-  context: { params: { surveyId: string } }
+  request: NextRequest, { params: resolvedParams }: ResponseDetailPageProps
 ) {
   const origin = request.headers.get('origin')
-  const { surveyId } = context.params
+  const { surveyId } = await resolvedParams
 
   try {
     const responses = await prisma.surveyResponse.findMany({

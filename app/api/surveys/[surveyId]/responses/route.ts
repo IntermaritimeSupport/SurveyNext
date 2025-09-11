@@ -60,10 +60,15 @@ const sanitizeOptions = (options: any): QuestionOption[] | null => {
   }).filter(opt => opt.value !== '');
 };
 
+interface Props {
+  params: Promise<{
+    surveyId: string;
+  }>;
+}
 // GET /api/surveys/[surveyId]/responses
-export async function GET(request: NextRequest, { params }: { params: { surveyId: string } }) {
+export async function GET(request: NextRequest, { params: resolvedParams }: Props) {
   const origin = request.headers.get('origin');
-  const { surveyId } = params;
+  const { surveyId } = await resolvedParams;
 
   try {
     const responses = await prisma.surveyResponse.findMany({
@@ -102,9 +107,9 @@ export async function GET(request: NextRequest, { params }: { params: { surveyId
 }
 
 // POST /api/surveys/[surveyId]/responses
-export async function POST(request: NextRequest, { params }: { params: { surveyId: string } }) {
+export async function POST(request: NextRequest, { params: resolvedParams }: Props) {
   const origin = request.headers.get('origin');
-  const { surveyId } = params;
+  const { surveyId } = await resolvedParams;
 
   try {
     const body: PostResponseBody = await request.json();

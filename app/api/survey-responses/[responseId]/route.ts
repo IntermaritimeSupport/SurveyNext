@@ -26,10 +26,16 @@ export async function OPTIONS(req: NextRequest) {
   return new NextResponse(null, { status: 200, headers: withCors(origin) })
 }
 
+
+interface ResponseDetailPageProps {
+  params: Promise<{
+    responseId: string;
+  }>;
+}
 // GET /api/survey-responses/[responseId]
-export async function GET(request: NextRequest, { params }: { params: { responseId: string } }) {
+export async function GET(request: NextRequest,  {params: resolvedParams}: ResponseDetailPageProps) {
   const origin = request.headers.get('origin')
-  const { responseId } = params
+  const { responseId } = await resolvedParams;
   try {
     const surveyResponse = await prisma.surveyResponse.findUnique({
       where: { id: responseId },
@@ -61,9 +67,9 @@ export async function GET(request: NextRequest, { params }: { params: { response
 }
 
 // PUT /api/survey-responses/[responseId]
-export async function PUT(request: NextRequest, { params }: { params: { responseId: string } }) {
+export async function PUT(request: NextRequest, {params: resolvedParams}: ResponseDetailPageProps) {
   const origin = request.headers.get('origin')
-  const { responseId } = params
+  const { responseId } = await resolvedParams;
   try {
     const body = await request.json()
     const { email, isComplete, answers } = body
@@ -130,9 +136,9 @@ export async function PUT(request: NextRequest, { params }: { params: { response
 }
 
 // DELETE /api/survey-responses/[responseId]
-export async function DELETE(request: NextRequest, { params }: { params: { responseId: string } }) {
+export async function DELETE(request: NextRequest, {params: resolvedParams}: ResponseDetailPageProps) {
   const origin = request.headers.get('origin')
-  const { responseId } = params
+  const { responseId } = await resolvedParams;
   try {
     await prisma.surveyResponse.delete({ where: { id: responseId } })
     return NextResponse.json(

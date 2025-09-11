@@ -30,11 +30,15 @@ export async function OPTIONS(req: NextRequest) {
     headers: withCors(origin),
   });
 }
-
+interface Props {
+  params: Promise<{
+    id: string;
+  }>;
+}
 // GET /api/users/[id] - Obtener un usuario por ID
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params: resolvedParams }: Props) {
   const origin = request.headers.get('origin')
-  const { id } = params;
+  const { id } = await resolvedParams;
   try {
     const user = await prisma.user.findUnique({
       where: { id },
@@ -78,9 +82,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 // PUT /api/users/[id] - Actualizar un usuario por ID
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params: resolvedParams }: Props) {
   const origin = request.headers.get('origin')
-  const { id } = params;
+  const { id } = await resolvedParams;
   try {
     const body = await request.json();
     const { name, email, password, role, status } = body;
@@ -118,8 +122,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 }
 
 // DELETE /api/users/[id] - Eliminar un usuario por ID
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function DELETE(request: Request, { params: resolvedParams }: Props) {
+  const { id } = await resolvedParams;
   try {
     await prisma.user.delete({
       where: { id },

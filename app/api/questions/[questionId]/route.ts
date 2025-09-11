@@ -30,13 +30,18 @@ export async function OPTIONS(req: NextRequest) {
   })
 }
 
+interface RouteContext {
+  params: Promise<{
+    questionId: string;
+  }>;
+}
 // GET /api/questions/[questionId] - Obtener una pregunta por ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { questionId: string } }
+  { params: resolvedParams }: RouteContext
 ) {
   const origin = request.headers.get('origin')
-  const { questionId } = params
+  const { questionId } = await resolvedParams;
 
   try {
     const question = await prisma.question.findUnique({
@@ -72,10 +77,10 @@ export async function GET(
 // PUT /api/questions/[questionId] - Actualizar una pregunta por ID
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { questionId: string } }
+  { params: resolvedParams }: RouteContext
 ) {
   const origin = request.headers.get('origin')
-  const { questionId } = params
+  const { questionId } = await resolvedParams;
 
   try {
     const body = await request.json()
@@ -128,10 +133,10 @@ export async function PUT(
 // DELETE /api/questions/[questionId] - Eliminar una pregunta por ID
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { questionId: string } }
+  { params: resolvedParams }: RouteContext
 ) {
   const origin = request.headers.get('origin')
-  const { questionId } = params
+  const { questionId } = await resolvedParams;
 
   try {
     await prisma.question.delete({

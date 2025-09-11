@@ -30,10 +30,15 @@ export async function OPTIONS(req: NextRequest) {
   });
 }
 
+interface Props {
+  params: Promise<{
+    surveyId: string;
+  }>;
+}
 // GET /api/surveys/[surveyId] - Obtener una encuesta por ID
-export async function GET(request: NextRequest, { params }: { params: { surveyId: string } }) {
+export async function GET(request: NextRequest, { params: resolvedParams }: Props) {
   const origin = request.headers.get('origin');
-  const { surveyId } = params;
+  const { surveyId } = await resolvedParams;
 
   try {
     const survey = await prisma.survey.findUnique({
@@ -59,9 +64,9 @@ export async function GET(request: NextRequest, { params }: { params: { surveyId
 }
 
 // PUT /api/surveys/[surveyId] - Actualizar una encuesta por ID
-export async function PUT(request: NextRequest, { params }: { params: { surveyId: string } }) {
+export async function PUT(request: NextRequest, { params: resolvedParams }: Props) {
   const origin = request.headers.get('origin');
-  const { surveyId } = params;
+  const { surveyId } = await resolvedParams;
 
   try {
     const body = await request.json();
@@ -161,9 +166,9 @@ export async function PUT(request: NextRequest, { params }: { params: { surveyId
 }
 
 // DELETE /api/surveys/[surveyId] - Eliminar encuesta por ID
-export async function DELETE(request: NextRequest, { params }: { params: { surveyId: string } }) {
+export async function DELETE(request: NextRequest, { params: resolvedParams }: Props) {
   const origin = request.headers.get('origin');
-  const { surveyId } = params;
+  const { surveyId } = await resolvedParams;
 
   try {
     await prisma.survey.delete({ where: { id: surveyId } });

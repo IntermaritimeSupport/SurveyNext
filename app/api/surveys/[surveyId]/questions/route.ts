@@ -25,11 +25,15 @@ export async function OPTIONS(req: NextRequest) {
   const origin = req.headers.get('origin');
   return new NextResponse(null, { status: 200, headers: withCors(origin) });
 }
-
+interface ResponseDetailPageProps {
+  params: Promise<{
+    surveyId: string;
+  }>;
+}
 // GET /api/surveys/[surveyId]/questions
-export async function GET(request: NextRequest, { params }: { params: { surveyId: string } }) {
+export async function GET(request: NextRequest, {params: resolvedParams}: ResponseDetailPageProps) {
   const origin = request.headers.get('origin');
-  const { surveyId } = params;
+  const { surveyId } = await resolvedParams;
   try {
     const questions = await prisma.question.findMany({
       where: { surveyId },
@@ -44,9 +48,9 @@ export async function GET(request: NextRequest, { params }: { params: { surveyId
 }
 
 // POST /api/surveys/[surveyId]/questions
-export async function POST(request: NextRequest, { params }: { params: { surveyId: string } }) {
+export async function POST(request: NextRequest, { params: resolvedParams }: ResponseDetailPageProps) {
   const origin = request.headers.get('origin');
-  const { surveyId } = params;
+  const { surveyId } = await resolvedParams;
 
   try {
     const body = await request.json();
