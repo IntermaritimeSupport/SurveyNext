@@ -3,7 +3,7 @@
 
 import { AdminLayout } from "@/components/admin/admin-layout"
 import React, { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -167,16 +167,9 @@ function renderAnswerValue(answer: APIAnswer) {
   }
 }
 
-interface ResponseDetailPageProps {
-  params: Promise<{
-    surveyId: string;
-    responseId: string;
-  }>;
-}
-
-export default async function ResponseDetailPage({ params: resolvedParams }: ResponseDetailPageProps) {
+export default function ResponseDetailPage() {
   const router = useRouter()
-  const { responseId } = await resolvedParams;
+  const { responseId } = useParams()
   const [response, setResponse] = useState<APISurveyResponseDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
