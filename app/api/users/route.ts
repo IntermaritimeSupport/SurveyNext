@@ -32,6 +32,7 @@ export async function OPTIONS(req: NextRequest) {
 }
 
 export async function GET(request: Request) {
+  const origin = request.headers.get('origin')
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -45,10 +46,10 @@ export async function GET(request: Request) {
         lastLogin: true,
       },
     });
-    return NextResponse.json(users, { status: 200 });
+    return NextResponse.json(users,{ status: 200, headers: withCors(origin) });
   } catch (error) {
     console.error('Error fetching users:', error);
-    return NextResponse.json({ message: 'Error al obtener usuarios' }, { status: 500 });
+    return NextResponse.json({ message: 'Error al obtener usuarios' }, { status: 500, headers: withCors(origin) });
   }
 }
 
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
 
     // Validación básica
     if (!email || !name || !password) {
-      return NextResponse.json({ message: 'Faltan campos obligatorios (email, name, password)' }, { status: 400 });
+      return NextResponse.json({ message: 'Faltan campos obligatorios (email, name, password)' }, { status: 400, headers: withCors(origin) });
     }
 
     // Hashear la contraseña
@@ -84,12 +85,12 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json(newUser, { status: 201 });
+    return NextResponse.json(newUser, { status: 201, headers: withCors(origin) });
   } catch (error: any) {
     console.error('Error creating user:', error);
     if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
-      return NextResponse.json({ message: 'El correo electrónico ya está registrado' }, { status: 409 });
+      return NextResponse.json({ message: 'El correo electrónico ya está registrado' }, { status: 409, headers: withCors(origin) });
     }
-    return NextResponse.json({ message: 'Error al crear usuario' }, { status: 500 });
+    return NextResponse.json({ message: 'Error al crear usuario' }, { status: 500, headers: withCors(origin) });
   }
 }
