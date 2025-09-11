@@ -22,14 +22,8 @@ interface APIUser {
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
-
-// --- CORRECCIÓN CLAVE AQUÍ: Acceso directo a params.userId ---
-// En Client Components, 'params' es un objeto proxy. Puedes acceder directamente a sus propiedades.
-// La advertencia es una "sugerencia" de migración futura, no un error actual de uso.
-export default function EditUserPage({ params }: { params: { userId: string } }) {
-  const userId = useParams() // <-- Acceso directo, como estaba originalmente antes de React.use()
-  // --- FIN CORRECCIÓN CLAVE ---
-
+export default function EditUserPage() {
+  const userId = useParams()
   const router = useRouter();
   const [user, setUser] = useState<APIUser | null>(null);
   const [loading, setLoading] = useState(true);

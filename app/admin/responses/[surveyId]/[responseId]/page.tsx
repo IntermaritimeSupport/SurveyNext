@@ -171,7 +171,7 @@ function renderAnswerValue(answer: APIAnswer) {
 export default function ResponseDetailPage({
   params,
 }: {
-  params: { responseId: string }
+  params: { surveyId: string; responseId: string }
 }) {
   const router = useRouter()
   const { responseId } = params

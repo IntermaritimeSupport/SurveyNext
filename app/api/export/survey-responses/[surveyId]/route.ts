@@ -90,10 +90,10 @@ function convertToCsv(data: any[]): string {
 // GET /api/export/survey-responses/[surveyId]
 export async function GET(
   request: NextRequest,
-  { params }: { params: { surveyId: string } }
+  context: { params: { surveyId: string } }
 ) {
   const origin = request.headers.get('origin')
-  const { surveyId } = params
+  const { surveyId } = context.params
 
   try {
     const responses = await prisma.surveyResponse.findMany({
