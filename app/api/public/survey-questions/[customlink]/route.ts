@@ -30,13 +30,20 @@ export async function OPTIONS(req: NextRequest) {
   })
 }
 
+interface RouteContext {
+  params: {
+    surveyId: string;
+    questionId?: string; // Añade esto si tienes rutas dinámicas anidadas
+  };
+}
+
 // GET /api/surveys/[surveyId]/questions - Obtener preguntas de una encuesta por ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { surveyId: string } }
+  { params }: RouteContext
 ) {
   const origin = request.headers.get('origin')
-  const { surveyId } = params
+  const { surveyId } = params;
 
   try {
     const survey = await prisma.survey.findUnique({
