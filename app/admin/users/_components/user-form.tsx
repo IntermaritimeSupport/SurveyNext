@@ -11,11 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Save, Trash2 } from "lucide-react"
 import { Role, UserStatus } from '@prisma/client'; // Importar enums de Prisma
+import { useAuth } from "@/contexts/auth-context"
 
 // Interfaz para el usuario que se mostrará/editará
 interface UserFormProps {
   initialUser?: { // Opcional, si estamos editando
-    id: string;
+    id: string; // Asumiendo que el ID es un string (e.g., UUID), si fuera Int, cambiar a number
     email: string;
     name: string;
     role: Role;
@@ -24,11 +25,12 @@ interface UserFormProps {
   };
   onSaveSuccess?: () => void; // Callback después de guardar exitosamente
   onCancel?: () => void; // Callback para cancelar
+  myRole: string; // El rol del usuario actualmente logueado
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
-export function UserForm({ initialUser, onSaveSuccess, onCancel }: UserFormProps) {
+export function UserForm({ initialUser, onSaveSuccess, onCancel, myRole }: UserFormProps) {
   const router = useRouter();
   const isEditing = !!initialUser;
 
@@ -42,6 +44,22 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel }: UserFormProps
   const [error, setError] = useState<string | null>(null);
   const [showPasswordFields, setShowPasswordFields] = useState(false);
 
+  // Efecto para manejar el estado de las contraseñas al cambiar de modo
+  useEffect(() => {
+    if (!isEditing) {
+      // Si estamos creando un nuevo usuario, asegúrate de que los campos de contraseña estén visibles
+      setShowPasswordFields(true);
+      setPassword('');
+      setConfirmPassword('');
+    } else {
+      // Si estamos editando un usuario existente, ocultar los campos por defecto
+      setShowPasswordFields(false);
+      setPassword(''); // Limpiar cualquier valor previo
+      setConfirmPassword('');
+    }
+  }, [isEditing]);
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -54,13 +72,15 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel }: UserFormProps
       return;
     }
 
+    // Para creación, la contraseña es obligatoria.
     if (!isEditing && (!password.trim() || !confirmPassword.trim())) {
       setError("La contraseña y su confirmación son obligatorias para nuevos usuarios.");
       setIsLoading(false);
       return;
     }
 
-    if (password.trim() && password !== confirmPassword) {
+    // Si se ha introducido alguna contraseña (para creación o cambio en edición), validar que coincidan.
+    if ((password.trim() || confirmPassword.trim()) && password !== confirmPassword) {
       setError("Las contraseñas no coinciden.");
       setIsLoading(false);
       return;
@@ -69,8 +89,8 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel }: UserFormProps
     const userData: any = {
       email,
       name,
-      role,
-      status,
+      role, // El rol seleccionado en el formulario
+      status, // El estado seleccionado en el formulario
     };
 
     if (password.trim()) { // Solo enviar la contraseña si se ha modificado/ingresado
@@ -79,25 +99,32 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel }: UserFormProps
 
     try {
       let response;
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'x-requester-role': myRole, // ¡Añadimos el rol del usuario logueado para la autorización en el backend!
+      };
+      console.log(myRole)
+
       if (isEditing) {
         // Actualizar usuario existente
         response = await fetch(`${API_BASE_URL}/api/users/${initialUser!.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: headers,
           body: JSON.stringify(userData),
         });
       } else {
         // Crear nuevo usuario
-        response = await fetch(`${API_BASE_URL}/api/users`, {
+        response = await fetch(`${API_BASE_URL}/api/users`, { // Endpoint para crear usuario
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: headers,
           body: JSON.stringify(userData),
         });
       }
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || `Error al ${isEditing ? 'actualizar' : 'crear'} el usuario.`);
+        // El backend enviará mensajes específicos (e.g., 'No tienes permisos', 'Email ya registrado')
+        throw new Error(errorData.message || `Error desconocido al ${isEditing ? 'actualizar' : 'crear'} el usuario.`);
       }
 
       alert(`Usuario ${isEditing ? 'actualizado' : 'creado'} con éxito!`);
@@ -123,8 +150,13 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel }: UserFormProps
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/${initialUser.id}`, {
+      const headers: HeadersInit = {
+        'x-requester-role': myRole, // ¡Añadimos el rol del usuario logueado para la autorización!
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/users/${initialUser.id}`, { // Endpoint para eliminar usuario
         method: 'DELETE',
+        headers: headers,
       });
 
       if (!response.ok) {
@@ -168,10 +200,9 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel }: UserFormProps
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="ejemplo@dominio.com"
-              disabled={isLoading || isEditing} // El email no se edita en este formulario una vez creado
-            // Si permites editar email, quita `isEditing` de `disabled`
+              disabled={isLoading || isEditing} // Deshabilitar si se está editando o cargando (el email no se edita directamente)
             />
-            {isEditing && <p className="text-sm text-slate-500 mt-1">El email no se puede cambiar directamente.</p>}
+            {isEditing && <p className="text-sm text-slate-500 mt-1">El email no se puede cambiar directamente para usuarios existentes.</p>}
           </div>
 
           <div>
@@ -186,7 +217,7 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel }: UserFormProps
             />
           </div>
 
-          {/* Contraseña solo si es nuevo usuario o si se quiere cambiar */}
+          {/* Campos de Contraseña */}
           {!isEditing || showPasswordFields ? (
             <>
               <div>
@@ -217,7 +248,7 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel }: UserFormProps
             <Button
               type="button"
               variant="outline"
-              onClick={() => setShowPasswordFields(true)} // mostrar los campos
+              onClick={() => setShowPasswordFields(true)} // Botón para mostrar los campos de contraseña en modo edición
               className="w-full"
               disabled={isLoading}
             >
@@ -233,8 +264,12 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel }: UserFormProps
                 <SelectValue placeholder="Selecciona un rol" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={Role.USER}>Usuario</SelectItem>
-                <SelectItem value={Role.ADMIN}>Administrador</SelectItem>
+                {/* Genera las opciones de rol dinámicamente desde el enum de Prisma */}
+                {Object.values(Role).map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {r.charAt(0).toUpperCase() + r.slice(1).toLowerCase()} {/* Formateo de nombre */}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -247,9 +282,12 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel }: UserFormProps
                   <SelectValue placeholder="Selecciona un estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={UserStatus.ACTIVE}>Activo</SelectItem>
-                  <SelectItem value={UserStatus.INACTIVE}>Inactivo</SelectItem>
-                  <SelectItem value={UserStatus.SUSPENDED}>Suspendido</SelectItem>
+                  {/* Genera las opciones de estado dinámicamente desde el enum de Prisma */}
+                  {Object.values(UserStatus).map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()} {/* Formateo de nombre */}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

@@ -1,6 +1,6 @@
 // app/api/public/survey-questions/[customlink]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -31,7 +31,7 @@ export async function OPTIONS(req: NextRequest) {
   });
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const origin = request.headers.get('origin')
   try {
     const users = await prisma.user.findMany({
@@ -54,26 +54,62 @@ export async function GET(request: Request) {
 }
 
 // POST /api/users - Crear un nuevo usuario
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const origin = request.headers.get('origin');
   try {
     const body = await request.json();
-    const { email, name, password, role } = body;
+    const { email, name, password, role: newUserRoleString } = body; // 'newUserRoleString' es el rol que se intenta asignar al nuevo usuario
 
-    // Validación básica
+    const requestingUserRoleHeader = request.headers.get('x-requester-role');
+    let requestingUserRole: Role;
+
+    if (!requestingUserRoleHeader) {
+      return NextResponse.json({ message: 'No autorizado: Rol del solicitante no proporcionado.' }, { status: 401, headers: withCors(origin) });
+    }
+
+    // Validar que el rol del solicitante sea un valor válido del enum Role
+    if (!Object.values(Role).includes(requestingUserRoleHeader as Role)) {
+      return NextResponse.json({ message: 'No autorizado: Rol del solicitante inválido.' }, { status: 401, headers: withCors(origin) });
+    }
+    requestingUserRole = requestingUserRoleHeader as Role;
+    // --- Fin de Autenticación y Autorización del Solicitante ---
+
+
+    // 2. Validación básica de campos obligatorios para el nuevo usuario
     if (!email || !name || !password) {
       return NextResponse.json({ message: 'Faltan campos obligatorios (email, name, password)' }, { status: 400, headers: withCors(origin) });
     }
 
-    // Hashear la contraseña
-    const hashedPassword = await bcrypt.hash(password, 10);
+    let newUserRole: Role = Role.USER; 
 
+    if (newUserRoleString) {
+      if (!Object.values(Role).includes(newUserRoleString as Role)) {
+        return NextResponse.json({ message: 'Rol de usuario a crear inválido.' }, { status: 400, headers: withCors(origin) });
+      }
+      newUserRole = newUserRoleString as Role;
+    }
+
+    let canCreateTargetRole = false;
+
+    if (requestingUserRole === Role.SUPERADMIN) {
+      canCreateTargetRole = true;
+    } else if (requestingUserRole === Role.ADMIN) {
+      const allowedAdminCreationRoles: Role[] = [Role.ADMIN, Role.MODERATOR, Role.USER];
+      if (allowedAdminCreationRoles.includes(newUserRole)) {
+        canCreateTargetRole = true;
+      }
+    }
+    if (!canCreateTargetRole) {
+      return NextResponse.json({ message: 'No tienes permisos para crear usuarios con este rol.' }, { status: 403, headers: withCors(origin) });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await prisma.user.create({
       data: {
         email,
         name,
         password: hashedPassword,
-        role: role || 'USER', // Establece USER por defecto si no se proporciona
-        // Otros campos como status, createdAt, updatedAt, lastLogin se manejan por defecto
+        role: newUserRole,
+        status: 'ACTIVE',
       },
       select: {
         id: true,
@@ -91,6 +127,6 @@ export async function POST(request: Request) {
     if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
       return NextResponse.json({ message: 'El correo electrónico ya está registrado' }, { status: 409, headers: withCors(origin) });
     }
-    return NextResponse.json({ message: 'Error al crear usuario' }, { status: 500, headers: withCors(origin) });
+    return NextResponse.json({ message: 'Error al crear usuario', error: error.message }, { status: 500, headers: withCors(origin) });
   }
 }

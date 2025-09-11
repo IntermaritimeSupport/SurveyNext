@@ -12,25 +12,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, User, Calendar, Loader2, ArrowLeft, Eye } from "lucide-react"
 import Link from "next/link"
 
-// Importar los tipos de Prisma
 import type { SurveyResponse as PrismaSurveyResponse, User as PrismaUser, Survey as PrismaSurvey } from "@prisma/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { SurveyQuestionResponsesChart } from "@/components/charts/chart-pie-interactive"
 
-// =========================================================================
-// INTERFACES
-// =========================================================================
-
-// Interfaz para la respuesta de la API de GET /api/surveys/[surveyId]/responses
 interface APISurveyResponseListItem extends Omit<PrismaSurveyResponse, "email" | "userId" | "surveyId"> {
-  id: string // Asegurar que el ID está presente
+  id: string
   email: string | null
   user: Pick<PrismaUser, "id" | "name" | "email"> | null
   survey: Pick<PrismaSurvey, "id" | "title" | "description" | "isAnonymous">
-  // No necesitamos 'answers' aquí para la lista, se obtendrá en el detalle
 }
 
-// Interfaz para las respuestas detalladas con respuestas
 interface DetailedSurveyResponse {
   id: string
   answers: {
@@ -46,7 +38,6 @@ interface DetailedSurveyResponse {
   }[]
 }
 
-// Interfaz para los datos procesados para el gráfico
 interface ProcessedQuestionData {
   id: string
   title: string
@@ -68,11 +59,9 @@ interface ProcessedQuestionData {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
-// Función para procesar respuestas en datos para el gráfico
 function processResponsesForChart(responses: DetailedSurveyResponse[]): ProcessedQuestionData[] {
   const questionsMap = new Map<string, ProcessedQuestionData>()
 
-  // Recopilar todas las preguntas y sus respuestas
   responses.forEach((response) => {
     response.answers.forEach((answer) => {
       const question = answer.question
@@ -90,7 +79,6 @@ function processResponsesForChart(responses: DetailedSurveyResponse[]): Processe
     })
   })
 
-  // Procesar respuestas para cada pregunta
   questionsMap.forEach((questionData, questionId) => {
     const allAnswers = responses.flatMap((response) =>
       response.answers.filter((answer) => answer.question.id === questionId),
@@ -144,15 +132,12 @@ function processResponsesForChart(responses: DetailedSurveyResponse[]): Processe
   return Array.from(questionsMap.values()).sort((a, b) => a.order - b.order)
 }
 
-// =========================================================================
-// SURVEY RESPONSES LIST PAGE COMPONENT
-// =========================================================================
 export default function SurveyResponsesListPage() {
   const params = useParams()
   const router = useRouter()
 
   const surveyId = typeof params.surveyId === "string" ? params.surveyId : undefined
-  const [selectedSurveyTitle, setSelectedSurveyTitle] = useState("Cargando...") // Para mostrar el título de la encuesta
+  const [selectedSurveyTitle, setSelectedSurveyTitle] = useState("Cargando...")
   const [surveyResponses, setSurveyResponses] = useState<APISurveyResponseListItem[]>([])
   const [filteredResponses, setFilteredResponses] = useState<APISurveyResponseListItem[]>([])
   const [searchTerm, setSearchTerm] = useState("")

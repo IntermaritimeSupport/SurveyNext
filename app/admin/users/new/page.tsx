@@ -6,9 +6,12 @@ import { useRouter } from "next/navigation"
 import { ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { UserForm } from "../_components/user-form"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function CreateUserPage() {
   const router = useRouter();
+  const { user } = useAuth()
+  const myRole = user?.role || "USER" 
 
   // Función que se llamará cuando el formulario UserForm guarde exitosamente
   const handleSaveSuccess = () => {
@@ -35,7 +38,7 @@ export default function CreateUserPage() {
         
         {/* El formulario de usuario para la creación */}
         {/* No pasamos 'initialUser' porque es para creación */}
-        <UserForm onSaveSuccess={handleSaveSuccess} onCancel={handleCancel} />
+        <UserForm myRole={myRole} onSaveSuccess={handleSaveSuccess} onCancel={handleCancel} />
       </div>
     </AdminLayout>
   );

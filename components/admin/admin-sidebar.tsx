@@ -8,11 +8,14 @@ import { BarChart3, FileText, Users, Settings, LogOut, PlusCircle, Home, Message
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { Role } from "@prisma/client"
 
 export function AdminSidebar() {
   const { user, logout } = useAuth()
   const { t } = useLanguage()
   const pathname = usePathname()
+
+  const userRole = user?.role || "USER" 
 
   const navigation = [
     {
@@ -20,38 +23,47 @@ export function AdminSidebar() {
       href: "/admin",
       icon: Home,
       current: pathname === "/admin",
+      roles: [Role.ADMIN, Role.SUPERADMIN,Role.MODERATOR] // Todos pueden ver el inicio del panel
     },
     {
       name: t("surveys"),
       href: "/admin/surveys",
       icon: FileText,
       current: pathname.startsWith("/admin/surveys"),
+      roles: [Role.ADMIN, Role.SUPERADMIN,Role.MODERATOR] // Todos pueden ver las encuestas
     },
     {
       name: t("responses"),
       href: "/admin/responses",
       icon: MessageSquare,
       current: pathname.startsWith("/admin/responses"),
+      roles: [Role.ADMIN, Role.SUPERADMIN,Role.MODERATOR] // Todos pueden ver las respuestas
     },
     {
       name: t("reports"),
       href: "/admin/reports",
       icon: TrendingUp,
       current: pathname.startsWith("/admin/reports"),
+      roles: [Role.ADMIN, Role.SUPERADMIN,Role.MODERATOR] // Todos pueden ver los reportes
     },
     {
-      name: "Usuarios",
+      name: "Usuarios", // Asumo que "Usuarios" no se traduce ya que no usaste t()
       href: "/admin/users",
       icon: Users,
       current: pathname.startsWith("/admin/users"),
+      roles: [Role.ADMIN, Role.SUPERADMIN] // Solo Super Admin y Admin pueden ver usuarios
     },
     {
       name: t("settings"),
       href: "/admin/settings",
       icon: Settings,
       current: pathname.startsWith("/admin/settings"),
+      roles: [Role.ADMIN, Role.SUPERADMIN] // Solo Super Admin y Admin pueden ver configuraciones
     },
   ]
+
+  // Filtra los elementos de navegación basados en el rol del usuario
+  const filteredNavigation = navigation.filter(item => item.roles.includes(userRole));
 
   return (
     <div className="flex h-full w-64 flex-col bg-white shadow-lg border-r border-slate-200">
@@ -71,7 +83,7 @@ export function AdminSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-4">
-        {navigation.map((item) => {
+        {filteredNavigation.map((item) => { // Ahora mapeamos sobre la navegación filtrada
           const Icon = item.icon
           return (
             <Link key={item.name} href={item.href}>
@@ -92,6 +104,7 @@ export function AdminSidebar() {
         })}
       </nav>
 
+      {/* Footer with Language Selector and Logout */}
       <div className="border-t border-slate-200 p-4 space-y-2">
         <LanguageSelector />
         <Button

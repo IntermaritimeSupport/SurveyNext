@@ -149,7 +149,9 @@ model SurveyAnalytics {
 }
 // Enums
 enum Role {
+  SUPERADMIN
   ADMIN
+  MODERATOR
   USER
 }
 
