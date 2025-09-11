@@ -25,7 +25,7 @@ interface UserFormProps {
   };
   onSaveSuccess?: () => void; // Callback después de guardar exitosamente
   onCancel?: () => void; // Callback para cancelar
-  myRole: string; // El rol del usuario actualmente logueado
+  myRole?: string; // El rol del usuario actualmente logueado
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
@@ -101,7 +101,7 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel, myRole }: UserF
       let response;
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
-        'x-requester-role': myRole, // ¡Añadimos el rol del usuario logueado para la autorización en el backend!
+        'x-requester-role': myRole || "USER", // ¡Añadimos el rol del usuario logueado para la autorización en el backend!
       };
       console.log(myRole)
 
@@ -151,7 +151,7 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel, myRole }: UserF
 
     try {
       const headers: HeadersInit = {
-        'x-requester-role': myRole, // ¡Añadimos el rol del usuario logueado para la autorización!
+        'x-requester-role': myRole || "USER", // ¡Añadimos el rol del usuario logueado para la autorización!
       };
 
       const response = await fetch(`${API_BASE_URL}/api/users/${initialUser.id}`, { // Endpoint para eliminar usuario
