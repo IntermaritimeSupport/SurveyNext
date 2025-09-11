@@ -8,14 +8,15 @@ import { BarChart3, FileText, Users, Settings, LogOut, PlusCircle, Home, Message
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Role } from "@prisma/client"
+import { Role } from "@prisma/client" // Ensure Role is imported
 
 export function AdminSidebar() {
   const { user, logout } = useAuth()
   const { t } = useLanguage()
   const pathname = usePathname()
 
-  const userRole = user?.role || "USER" 
+  // Corrected line: Use Role.USER if user.role is undefined
+  const userRole = user?.role || Role.USER
 
   const navigation = [
     {
@@ -23,42 +24,42 @@ export function AdminSidebar() {
       href: "/admin",
       icon: Home,
       current: pathname === "/admin",
-      roles: [Role.ADMIN, Role.SUPERADMIN,Role.MODERATOR] // Todos pueden ver el inicio del panel
+      roles: ["ADMIN", "SUPERADMIN",Role.MODERATOR] // Todos pueden ver el inicio del panel
     },
     {
       name: t("surveys"),
       href: "/admin/surveys",
       icon: FileText,
       current: pathname.startsWith("/admin/surveys"),
-      roles: [Role.ADMIN, Role.SUPERADMIN,Role.MODERATOR] // Todos pueden ver las encuestas
+      roles: ["ADMIN", "SUPERADMIN",Role.MODERATOR] // Todos pueden ver las encuestas
     },
     {
       name: t("responses"),
       href: "/admin/responses",
       icon: MessageSquare,
       current: pathname.startsWith("/admin/responses"),
-      roles: [Role.ADMIN, Role.SUPERADMIN,Role.MODERATOR] // Todos pueden ver las respuestas
+      roles: ["ADMIN", "SUPERADMIN",Role.MODERATOR] // Todos pueden ver las respuestas
     },
     {
       name: t("reports"),
       href: "/admin/reports",
       icon: TrendingUp,
       current: pathname.startsWith("/admin/reports"),
-      roles: [Role.ADMIN, Role.SUPERADMIN,Role.MODERATOR] // Todos pueden ver los reportes
+      roles: ["ADMIN", "SUPERADMIN",Role.MODERATOR] // Todos pueden ver los reportes
     },
     {
       name: "Usuarios", // Asumo que "Usuarios" no se traduce ya que no usaste t()
       href: "/admin/users",
       icon: Users,
       current: pathname.startsWith("/admin/users"),
-      roles: [Role.ADMIN, Role.SUPERADMIN] // Solo Super Admin y Admin pueden ver usuarios
+      roles: ["ADMIN", "SUPERADMIN"] // Solo Super Admin y Admin pueden ver usuarios
     },
     {
       name: t("settings"),
       href: "/admin/settings",
       icon: Settings,
       current: pathname.startsWith("/admin/settings"),
-      roles: [Role.ADMIN, Role.SUPERADMIN] // Solo Super Admin y Admin pueden ver configuraciones
+      roles: ["ADMIN", "SUPERADMIN"] // Solo Super Admin y Admin pueden ver configuraciones
     },
   ]
 
