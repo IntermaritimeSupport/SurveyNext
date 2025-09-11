@@ -167,14 +167,12 @@ function renderAnswerValue(answer: APIAnswer) {
   }
 }
 
-interface ResponseDetailPageProps {
-  params: {
-    surveyId: string
-    responseId: string
-  }
+type ResponseDetailPageProps = {
+  params: { surveyId: string; responseId: string }
 }
 
-export default function ResponseDetailPage({ params }: ResponseDetailPageProps) {
+export default function ResponseDetailPage(props: ResponseDetailPageProps) {
+  const { params } = props as ResponseDetailPageProps
   const router = useRouter()
   const { responseId } = params
   const [response, setResponse] = useState<APISurveyResponseDetail | null>(null)

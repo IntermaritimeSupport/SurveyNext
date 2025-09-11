@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
+    "skipLibCheck": true,
     "target": "es2017", // Asegúrate de que sea al menos es2015, pero es2017 o esnext es mejor
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
-    "skipLibCheck": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true, // Next.js se encarga de la emisión de archivos
