@@ -32,7 +32,7 @@ export async function OPTIONS(req: NextRequest) {
 
 interface RouteContext {
   params: {
-    surveyId: string;
+    customlink: string;
     questionId?: string; // Añade esto si tienes rutas dinámicas anidadas
   };
 }
@@ -43,11 +43,11 @@ export async function GET(
   { params }: RouteContext
 ) {
   const origin = request.headers.get('origin')
-  const { surveyId } = params;
+  const { customlink } = params;
 
   try {
     const survey = await prisma.survey.findUnique({
-      where: { id: surveyId },
+      where: { customLink: customlink },
       select: {
         id: true,
         title: true,
@@ -122,7 +122,7 @@ export async function GET(
     )
   } catch (error) {
     console.error(
-      `Error fetching survey questions for surveyId (${surveyId}):`,
+      `Error fetching survey questions for surveyId (${error}):`,
       error
     )
     return NextResponse.json(

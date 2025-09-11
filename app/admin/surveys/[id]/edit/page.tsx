@@ -1,15 +1,12 @@
+// app/admin/surveys/[id]/page.tsx
 "use client"
 
 import { AdminLayout } from "@/components/admin/admin-layout"
 import SurveyManager from "@/components/survey-builder/survey-manager"
 
-interface EditSurveyPageProps {
-  params: {
-    id: string
-  }
-}
 
-export default function EditSurveyPage({ params }: EditSurveyPageProps) {
+export default function EditSurveyPage() {
+
   return (
     <AdminLayout>
       <SurveyManager />
