@@ -111,7 +111,7 @@ export default function ReportsPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-8 p-4 md:p-6 lg:p-8">
+      <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-extrabold tracking-tight text-gray-900">Dashboard de Reportes</h1>

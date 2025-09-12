@@ -1,10 +1,14 @@
+"use client"; // <--- ¡Esta línea es necesaria para usar hooks de React!
+
 import type React from "react"
-import type { Metadata } from "next"
+import { useState, useEffect } from "react"
+// import type { Metadata } from "next" // Ya no se necesita si no se exporta metadata aquí
 import { Inter, Noto_Sans_SC } from "next/font/google"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Analytics } from '@vercel/analytics/next';
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster";
+import Loader from "@/components/loaders/loader"; // Asumo que este es tu componente Loader
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,17 +22,21 @@ const notoSansSC = Noto_Sans_SC({
   variable: "--font-noto-sans-sc",
 })
 
-export const metadata: Metadata = {
-  title: "Sistema de Encuestas | Survey System",
-  description: "Sistema profesional de encuestas con panel de administración multiidioma",
-    generator: 'v0.app'
-}
-
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 2000); // Muestra el loader por 2 segundos. Ajusta este tiempo según necesites.
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <html lang="es" className={`${inter.variable} ${notoSansSC.variable} antialiased`}>
       <head>
@@ -36,9 +44,19 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         <AuthProvider>
-          {children}
-          <Toaster />
+          {loading ? (
+            // APLICA LAS CLASES AQUÍ para centrar el loader
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
+              <Loader />
+            </div>
+          ) : (
+            <>
+              {children}
+              <Toaster />
+            </>
+          )}
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   )
