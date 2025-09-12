@@ -7,37 +7,20 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-
-// Importar los componentes de tabla de shadcn/ui
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-
-// Importar los tipos de Prisma directamente
-import type { Survey as PrismaSurvey, SurveyStatus } from "@prisma/client" // ✅ Asegúrate de importar SurveyStatus
+import type { Survey as PrismaSurvey } from "@prisma/client" // ✅ Asegúrate de importar SurveyStatus
 import { Alert, AlertDescription } from "@/components/ui/alert"
-
 import { Search, FileText, ExternalLink, Eye, PlusCircle } from "lucide-react"
-
-// ✅ Importar el nuevo componente del gráfico
-import { Loader2 } from "lucide-react" // Necesario para el spinner de carga
 import { SurveyResponsesBarChart } from "@/components/charts/chart-bar-interactive"
+import Loader from "@/components/loaders/loader"
 
-// =========================================================================
-// INTERFACES - ¡AHORA ÚNICA Y EXTENDIDA!
-// =========================================================================
-
-// ✅ Extiende directamente de PrismaSurvey para incluir todas sus propiedades
-// y luego añade las propiedades adicionales como '_count'.
-export interface APISurvey extends PrismaSurvey { // Exporta para que pueda ser importada
+export interface APISurvey extends PrismaSurvey {
   _count?: {
     responses: number;
-    // Si _count también trae questions, puedes añadirlo aquí
     questions?: number;
   };
 }
 
-// =========================================================================
-// SURVEYS LIST PAGE COMPONENT
-// =========================================================================
 export default function SurveysListPage() {
   const [allSurveys, setAllSurveys] = useState<APISurvey[]>([])
   const [filteredSurveys, setFilteredSurveys] = useState<APISurvey[]>([])
@@ -105,8 +88,7 @@ export default function SurveysListPage() {
               <CardDescription>Obteniendo encuestas y sus respuestas.</CardDescription>
             </CardHeader>
             <CardContent className="flex h-[300px] items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-              <span className="ml-2 text-gray-600">Cargando...</span>
+              <Loader />
             </CardContent>
           </Card>
         ) : errorSurveys ? (

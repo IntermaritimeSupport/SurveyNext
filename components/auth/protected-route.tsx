@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation" // Importamos usePathname
 import { Role } from '@prisma/client'; // Importamos el enum Role de Prisma
+import Loader from "../loaders/loader"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -79,8 +80,8 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   // Muestra un spinner de carga mientras se verifican la autenticación y autorización
   if (isLoading || !isAuthenticated || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
+        <Loader />
       </div>
     );
   }

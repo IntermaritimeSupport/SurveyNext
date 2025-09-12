@@ -5,6 +5,7 @@ import React from 'react';
 import { useAuth } from '@/contexts/auth-context'; // Ajusta la ruta a tu AuthContext
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Loader from '../loaders/loader';
 
 interface AuthPageWrapperProps {
   children: React.ReactNode;
@@ -31,8 +32,8 @@ export function AuthPageWrapper({ children }: AuthPageWrapperProps) {
   // Esto evita un "flash" de contenido antes de la redirección
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
+        <Loader />
       </div>
     );
   }
