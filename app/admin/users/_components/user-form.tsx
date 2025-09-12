@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Save, Trash2 } from "lucide-react"
 import { Role, UserStatus } from '@prisma/client'; // Importar enums de Prisma
-import { useAuth } from "@/contexts/auth-context"
 
 // Interfaz para el usuario que se mostrará/editará
 interface UserFormProps {
@@ -103,7 +102,6 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel, myRole }: UserF
         'Content-Type': 'application/json',
         'x-requester-role': myRole || "USER", // ¡Añadimos el rol del usuario logueado para la autorización en el backend!
       };
-      console.log(myRole)
 
       if (isEditing) {
         // Actualizar usuario existente

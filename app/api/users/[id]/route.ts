@@ -88,7 +88,7 @@ export async function PUT(request: Request, { params: resolvedParams }: Props) {
 
   const body = await request.json();
   const { name, email, password, role: newRoleString, status: newStatusString } = body;
-  console.log(body)
+  // console.log(body)
 
   // --- 1. Autenticación y Autorización del Solicitante ---
   const requestingUserRoleHeader = request.headers.get('x-requester-role');

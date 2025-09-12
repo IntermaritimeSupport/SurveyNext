@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 
 // Importar los tipos de Prisma
 import { type Survey as PrismaSurvey, SurveyStatus } from "@prisma/client"
+import Loader from "@/components/loaders/loader"
 
 // Extender el tipo de Survey de Prisma para incluir el conteo de preguntas (si la API lo devuelve)
 interface APISurvey extends PrismaSurvey {
@@ -130,10 +131,10 @@ export default function SurveysPage() {
 
           {/* Loading State */}
           {loading ? (
-            <CardContent className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-slate-500" />
-              <p className="ml-2 text-slate-500 text-sm">Cargando encuestas...</p>
-            </CardContent>
+            <div className="flex flex-col items-center justify-center min-h-[60vh]">
+              <Loader/>
+              <p className="text-xl text-gray-700">Cargando Encuestas...</p>
+            </div>
           ) : (
             <>
               {/* Empty State */}

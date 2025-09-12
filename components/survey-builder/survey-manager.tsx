@@ -51,7 +51,6 @@ export default function SurveyManager() {
   const [currentSurveyId, setCurrentSurveyId] = useState<string | undefined>(
     routeSurveyId === 'new' ? undefined : routeSurveyId
   );
-  console.log("Current Survey ID (from URL/state):", currentSurveyId);
 
   const [surveyData, setSurveyData] = useState<SurveyData>({
     title: "",

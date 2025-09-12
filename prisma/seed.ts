@@ -22,7 +22,7 @@ async function main() {
       update: {
         name: adminName,
         password: hashedPassword,
-        role: 'ADMIN', // Asegúrate de que tu enum Role incluya 'ADMIN'
+        role: 'ADMIN',
         status: 'ACTIVE',
       },
       create: {

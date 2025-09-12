@@ -3,13 +3,12 @@
 
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation" // Importar useRouter
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Users, UserPlus, Search, Edit, Trash2, Mail, Calendar, Shield, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react" // Añadir iconos de estado y loader
+import { Users, UserPlus, Search, Edit, Trash2, Mail, Calendar, Shield, Clock } from "lucide-react" // Añadir iconos de estado y loader
 import Link from "next/link"
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale'; // Para formatear fechas en español
@@ -17,6 +16,7 @@ import { es } from 'date-fns/locale'; // Para formatear fechas en español
 // Importar enums de Prisma directamente
 import { Role, UserStatus } from '@prisma/client';
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import Loader from "@/components/loaders/loader"
 
 // Interfaz para el usuario que se recibe del API (debe coincidir con tu API /api/users)
 interface APIUser {
@@ -33,7 +33,6 @@ interface APIUser {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 export default function UsersPage() {
-  const router = useRouter(); // Instanciar useRouter
   const [users, setUsers] = useState<APIUser[]>([]); // Usar APIUser[]
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
@@ -114,9 +113,9 @@ export default function UsersPage() {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
-          <p className="ml-2 text-slate-500">Cargando usuarios...</p>
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <Loader/>
+          <p className="text-xl text-gray-700">Cargando Usuarios...</p>
         </div>
       </AdminLayout>
     );

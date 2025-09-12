@@ -354,7 +354,6 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
         answers: answersForApi,
         isComplete: true,
       }
-      console.log("SurveyForm: Sending response data to API:", responseData)
 
       const apiResponse = await fetch(`${API_BASE_URL}/api/surveys/${survey.id}/responses`, {
         method: "POST",

@@ -8,6 +8,7 @@ import { Loader2, ChevronLeft } from "lucide-react"
 import { Role, UserStatus } from '@prisma/client';
 import { Button } from "../../../../components/ui/button" // Ajusta la ruta según la ubicación real del archivo Button
 import { AdminLayout } from "../../../../components/admin/admin-layout"
+import { useAuth } from "@/contexts/auth-context"
 
 // Interfaz para el usuario que se recibe del API
 interface APIUser {
@@ -25,7 +26,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export default function EditUserPage() {
   const userId = useParams()
   const router = useRouter();
-  const [user, setUser] = useState<APIUser | null>(null);
+  const { user } = useAuth()
+  const myRole = user?.role || "USER" 
+  const [users, setUser] = useState<APIUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,7 +93,7 @@ export default function EditUserPage() {
       );
     }
 
-    if (!user) {
+    if (!users) {
       return (
         <div className="min-h-screen bg-gray-100 p-4">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative m-4" role="alert">
@@ -116,7 +119,7 @@ export default function EditUserPage() {
           <h1 className="text-3xl font-bold text-slate-900 flex-1 text-center pr-20">Editar Usuario</h1>
           <div></div>
         </div>
-        <UserForm initialUser={user} onSaveSuccess={handleSaveSuccess} onCancel={handleCancel} />
+        <UserForm myRole={myRole} initialUser={users} onSaveSuccess={handleSaveSuccess} onCancel={handleCancel} />
       </div>
     );
   };

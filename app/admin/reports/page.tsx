@@ -2,17 +2,16 @@
 "use client"
 
 import { AdminLayout } from "@/components/admin/admin-layout"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Loader2, Download } from "lucide-react"
 import { useEffect, useState, useMemo } from "react"
 import { SurveyStatus } from "@prisma/client"
 import { SurveyOverviewCards } from "@/components/reports/overview-card"
 import { SurveyStatusPieChart } from "@/components/charts/total-surveys-pie-chart"
 import { SurveyResponsesBarChart } from "@/components/charts/chart-bar-interactive"
-import { SurveyQuestionResponsesChart } from "@/components/charts/chart-pie-interactive"
+import Loader from "@/components/loaders/loader"
+import { Download } from "lucide-react"
 
 // ✅ Asegúrate de que esta interfaz APISurvey sea la misma que la exportada en SurveysListPage.tsx
 export interface APISurveyWithQuestions { // Nuevo nombre para evitar conflictos y reflejar que trae preguntas
@@ -93,7 +92,7 @@ export default function ReportsPage() {
     return (
       <AdminLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-4" />
+          <Loader/>
           <p className="text-xl text-gray-700">Cargando reportes...</p>
         </div>
       </AdminLayout>
@@ -167,27 +166,6 @@ export default function ReportsPage() {
         </section>
 
         <Separator />
-
-        {/* Sección de Análisis Detallado por Pregunta (tu componente existente) */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-bold text-gray-800">Análisis Detallado por Pregunta</h2>
-          <p className="text-gray-600">Profundiza en las respuestas de preguntas específicas de tus encuestas.</p>
-          <SurveyQuestionResponsesChart 
-            surveys={allSurveys} 
-            loading={loading} 
-            error={error} 
-          />
-        </section>
-
-        {/* Puedes añadir más secciones aquí, por ejemplo: */}
-        {/*
-        <Separator />
-        <section className="space-y-4">
-          <h2 className="text-2xl font-bold text-gray-800">Análisis Demográfico</h2>
-          <p className="text-gray-600">Datos demográficos de los encuestados (si aplica).</p>
-           Aquí irían gráficos y tablas de datos demográficos si los recopilas
-        </section>
-        */}
       </div>
     </AdminLayout>
   )

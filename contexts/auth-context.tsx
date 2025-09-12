@@ -82,7 +82,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       setUser(data.user);
-      console.log('Login exitoso:', data.user);
     } catch (error: any) {
       console.error('Error en el login:', error);
       setUser(null);
@@ -108,7 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setUser(null);
-      console.log('Sesión cerrada exitosamente');
       router.push('/');
     } catch (error) {
       console.error('Error en el logout:', error);
@@ -139,7 +137,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const responseData = await response.json();
       setUser(responseData.user);
-      console.log('Registro exitoso:', responseData.user);
     } catch (error: any) {
       console.error('Error en el registro:', error);
       setUser(null);
