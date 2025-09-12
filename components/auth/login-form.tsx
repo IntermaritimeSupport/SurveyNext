@@ -1,37 +1,42 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
-import { useLanguage } from "@/hooks/use-language"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, LogIn } from "lucide-react"
 import Link from "next/link"
+import { useToast } from "@/components/ui/use-toast"
 
 export function LoginForm() {
   const { login, isLoading } = useAuth()
-  const { t } = useLanguage()
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   })
-  const [error, setError] = useState("")
   const [showPassword, setShowPassword] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
 
     try {
       await login(formData)
+      toast({
+        title: "Inicio de sesión exitoso",
+        description: "Redirigiendo al panel de administración...",
+        variant: "success",
+      })
       window.location.href = "/admin"
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al iniciar sesión")
+      toast({
+        title: "Error al iniciar sesión",
+        description: "Por favor, verifica tus credenciales e intenta de nuevo.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -50,11 +55,6 @@ export function LoginForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
 
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
