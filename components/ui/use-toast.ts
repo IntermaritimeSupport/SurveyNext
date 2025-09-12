@@ -5,6 +5,8 @@ import * as React from "react"
 
 import type {
   ToastProps,
+  // === ELIMINA ESTA LÍNEA si estaba presente ===
+  // ToastActionElement,
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
