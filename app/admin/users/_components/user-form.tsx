@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Save, Trash2 } from "lucide-react"
+import { Loader2, Trash2 } from "lucide-react"
 import { Role, UserStatus } from '@prisma/client'; // Importar enums de Prisma
+import { useToast } from "@/components/ui/use-toast"
 
 // Interfaz para el usuario que se mostrará/editará
 interface UserFormProps {
@@ -31,6 +31,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 export function UserForm({ initialUser, onSaveSuccess, onCancel, myRole }: UserFormProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const isEditing = !!initialUser;
 
   const [email, setEmail] = useState(initialUser?.email || '');
@@ -42,6 +43,7 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel, myRole }: UserF
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPasswordFields, setShowPasswordFields] = useState(false);
+
 
   // Efecto para manejar el estado de las contraseñas al cambiar de modo
   useEffect(() => {
@@ -61,116 +63,130 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel, myRole }: UserF
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setIsLoading(true);
 
-    // Validaciones del formulario
     if (!email.trim() || !name.trim()) {
-      setError("El email y el nombre son obligatorios.");
+      toast({
+        title: "Error",
+        description: "El email y el nombre son obligatorios.",
+        duration: 5000,
+        variant: "destructive",
+      });
       setIsLoading(false);
       return;
     }
 
-    // Para creación, la contraseña es obligatoria.
     if (!isEditing && (!password.trim() || !confirmPassword.trim())) {
-      setError("La contraseña y su confirmación son obligatorias para nuevos usuarios.");
+      toast({
+        title: "Error",
+        description: "La contraseña y su confirmación son obligatorias para nuevos usuarios.",
+        duration: 5000,
+        variant: "destructive",
+      });
       setIsLoading(false);
       return;
     }
 
-    // Si se ha introducido alguna contraseña (para creación o cambio en edición), validar que coincidan.
     if ((password.trim() || confirmPassword.trim()) && password !== confirmPassword) {
-      setError("Las contraseñas no coinciden.");
+      toast({
+        title: "Error",
+        description: "Las contraseñas no coinciden.",
+        duration: 5000,
+        variant: "destructive",
+      });
       setIsLoading(false);
       return;
     }
 
-    const userData: any = {
-      email,
-      name,
-      role, // El rol seleccionado en el formulario
-      status, // El estado seleccionado en el formulario
-    };
-
-    if (password.trim()) { // Solo enviar la contraseña si se ha modificado/ingresado
-      userData.password = password;
-    }
+    const userData: any = { email, name, role, status };
+    if (password.trim()) userData.password = password;
 
     try {
       let response;
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
-        'x-requester-role': myRole || "USER", // ¡Añadimos el rol del usuario logueado para la autorización en el backend!
+        'x-requester-role': myRole || "USER",
       };
 
       if (isEditing) {
-        // Actualizar usuario existente
         response = await fetch(`${API_BASE_URL}/api/users/${initialUser!.id}`, {
           method: 'PUT',
-          headers: headers,
+          headers,
           body: JSON.stringify(userData),
         });
       } else {
-        // Crear nuevo usuario
-        response = await fetch(`${API_BASE_URL}/api/users`, { // Endpoint para crear usuario
+        response = await fetch(`${API_BASE_URL}/api/users`, {
           method: 'POST',
-          headers: headers,
+          headers,
           body: JSON.stringify(userData),
         });
       }
 
       if (!response.ok) {
         const errorData = await response.json();
-        // El backend enviará mensajes específicos (e.g., 'No tienes permisos', 'Email ya registrado')
-        throw new Error(errorData.message || `Error desconocido al ${isEditing ? 'actualizar' : 'crear'} el usuario.`);
+        throw new Error(errorData.message || `Error al ${isEditing ? "actualizar" : "crear"} el usuario.`);
       }
 
-      alert(`Usuario ${isEditing ? 'actualizado' : 'creado'} con éxito!`);
-      if (onSaveSuccess) {
-        onSaveSuccess();
-      } else {
-        router.push('/admin/users'); // Redirigir a la lista de usuarios
-      }
-    } catch (err: any) {
-      console.error('Error saving user:', err);
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!isEditing || !initialUser || !window.confirm(`¿Estás seguro de que quieres eliminar a "${initialUser.name}"? Esta acción es irreversible.`)) {
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const headers: HeadersInit = {
-        'x-requester-role': myRole || "USER", // ¡Añadimos el rol del usuario logueado para la autorización!
-      };
-
-      const response = await fetch(`${API_BASE_URL}/api/users/${initialUser.id}`, { // Endpoint para eliminar usuario
-        method: 'DELETE',
-        headers: headers,
+      toast({
+        title: `Usuario ${isEditing ? "actualizado" : "creado"}`,
+        description: `El usuario "${name}" ha sido ${isEditing ? "actualizado" : "creado"} exitosamente.`,
+        duration: 5000,
+        variant: "success",
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error desconocido al eliminar usuario.');
-      }
-
-      alert(`Usuario "${initialUser.name}" eliminado correctamente.`);
       if (onSaveSuccess) {
         onSaveSuccess();
       } else {
         router.push('/admin/users');
       }
     } catch (err: any) {
-      console.error('Error deleting user:', err);
-      setError(err.message);
+      toast({
+        title: "Error",
+        description: err.message || `Error al ${isEditing ? "actualizar" : "crear"} el usuario.`,
+        duration: 5000,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!isEditing || !initialUser || !window.confirm(`¿Eliminar a "${initialUser.name}"?`)) return;
+
+    setIsLoading(true);
+
+    try {
+      const headers: HeadersInit = { 'x-requester-role': myRole || "USER" };
+      const response = await fetch(`${API_BASE_URL}/api/users/${initialUser.id}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al eliminar usuario.');
+      }
+
+      toast({
+        title: "Usuario eliminado",
+        description: `El usuario "${initialUser.name}" ha sido eliminado.`,
+        duration: 5000,
+        variant: "success",
+      });
+
+      if (onSaveSuccess) {
+        onSaveSuccess();
+      } else {
+        router.push('/admin/users');
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || 'Error al eliminar el usuario.',
+        duration: 5000,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -184,11 +200,6 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel, myRole }: UserF
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
 
           <div>
             <Label htmlFor="email">Email *</Label>

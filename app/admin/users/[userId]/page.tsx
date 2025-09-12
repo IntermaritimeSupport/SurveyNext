@@ -57,7 +57,7 @@ export default function EditUserPage() {
     if (userId) { 
       fetchUser();
     }
-  }, [userId]); // `userId` es una dependencia estable aquí
+  }, [userId]);
 
   const handleSaveSuccess = () => {
     router.push('/admin/users');
@@ -117,7 +117,6 @@ export default function EditUserPage() {
             Volver
           </Button>
           <h1 className="text-3xl font-bold text-slate-900 flex-1 text-center pr-20">Editar Usuario</h1>
-          <div></div>
         </div>
         <UserForm myRole={myRole} initialUser={users} onSaveSuccess={handleSaveSuccess} onCancel={handleCancel} />
       </div>

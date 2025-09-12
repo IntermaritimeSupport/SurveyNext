@@ -4,6 +4,7 @@ import { Inter, Noto_Sans_SC } from "next/font/google"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Analytics } from '@vercel/analytics/next';
 import "./globals.css"
+import { Toaster } from "@/components/ui/toaster";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -34,7 +35,10 @@ export default function RootLayout({
         <title>SurveyForms</title>
       </head>
       <body className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   )
