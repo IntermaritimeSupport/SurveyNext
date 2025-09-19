@@ -5,6 +5,7 @@ import type React from "react"
 import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation";
 import QuestionManager from "./QuestionManager";
+import Loader from "../loaders/loader";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -171,8 +172,8 @@ export default function SurveyManager() {
 
   if (authLoading || surveyLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-lg text-gray-700">Cargando...</p>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
+        <Loader />
       </div>
     );
   }
@@ -199,15 +200,15 @@ export default function SurveyManager() {
   const isCreatingNewSurvey = currentSurveyId === undefined;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-50 py-2">
+      <div className="max-w-4xl mx-auto px-1">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">
             {isCreatingNewSurvey ? "Crear Nueva Encuesta" : "Editar Encuesta"}
           </h1>
 
           <div className="mb-6 border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+            <nav className="-mb-px flex space-x-4 overflow-x-auto sm:space-x-8" aria-label="Tabs">
               <button
                 type="button"
                 onClick={() => setActiveTab("survey")}
@@ -275,7 +276,7 @@ export default function SurveyManager() {
                     <input
                       type="checkbox"
                       checked={surveyData.isPublished}
-                      onChange={(e) => setSurveyData({ ...surveyData, isPublished: e.target.checked })} // ✅ Directamente al estado
+                      onChange={(e) => setSurveyData({ ...surveyData, isPublished: e.target.checked })}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>

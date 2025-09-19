@@ -253,7 +253,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
 
       case PrismaQuestionType.RATING:
         const min = question.validation?.min || 1
-        const max = question.validation?.max || 5
+        const max = question.validation?.max || 10
 
         const getEmojiForRating = (value: number, total: number) => {
           const percentage = (value - 1) / (total - 1)
@@ -339,7 +339,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
         }
       case PrismaQuestionType.SCALE:
         const min2 = question.validation?.min || 1
-        const max2 = question.validation?.max || 5
+        const max2 = question.validation?.max || 10
         return (
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2 justify-center">

@@ -194,7 +194,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
           return "Must be a valid number."
         }
         const minVal = question.validation?.min || 1
-        const maxVal = question.validation?.max || (question.type === PrismaQuestionType.RATING ? 5 : 10)
+        const maxVal = question.validation?.max || (question.type === PrismaQuestionType.RATING ? 10 : 10)
         if (ratingScaleValue < minVal || ratingScaleValue > maxVal) {
           return `Must be between ${minVal} and ${maxVal}.`
         }
