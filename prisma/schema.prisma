@@ -49,6 +49,10 @@ model Question {
 model SurveyResponse {
   id          String   @id @default(cuid())
   email       String?  // Optional for anonymous surveys
+  company     String?
+  fullName   String?
+  ships     Int?
+  position   String?
   ipAddress   String?
   userAgent   String?
   startedAt   DateTime @default(now())

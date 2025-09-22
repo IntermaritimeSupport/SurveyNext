@@ -40,6 +40,10 @@ interface APIAnswer {
 interface APISurveyResponseDetail {
   id: string
   email: string | null
+  position: string | null
+  ships: string | null
+  fullName: string | null
+  company: string | null
   ipAddress: string | null
   userAgent: string | null
   startedAt: string
@@ -252,7 +256,7 @@ export default function ResponseDetailPage() {
               <p className="text-sm text-slate-600">{response.survey.description}</p>
             )}
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-slate-700">
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-700">
             <div className="flex items-center space-x-2">
               <Hash className="h-4 w-4 text-slate-500" />
               <span>
@@ -263,6 +267,18 @@ export default function ResponseDetailPage() {
             <div className="flex items-center space-x-2">
               <User className="h-4 w-4 text-slate-500" />
               <span>Participante: {response.user?.name || response.email || "Anónimo"}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <User className="h-4 w-4 text-slate-500" />
+              <span>Compañia: {response.user?.name || response.company || "Anónimo"}</span>
+            </div>
+              <div className="flex items-center space-x-2">
+              <User className="h-4 w-4 text-slate-500" />
+              <span>Nombre completo: {response.user?.name || response.fullName || "Anónimo"}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <User className="h-4 w-4 text-slate-500" />
+              <span>Barcos: {response.user?.name || response.ships || "Anónimo"}</span>
             </div>
             {response.email && (
               <div className="flex items-center space-x-2">
@@ -318,8 +334,6 @@ export default function ResponseDetailPage() {
                     <p className="text-xs text-slate-500 mt-2">
                       Tipo de pregunta: {answer.question.type}
                       <br />
-                      Respondida el:{" "}
-                      {format(new Date(answer.createdAt), "PPPp", { locale: es })}
                     </p>
                   </div>
                 ))
