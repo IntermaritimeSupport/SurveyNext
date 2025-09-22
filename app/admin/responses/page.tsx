@@ -10,7 +10,7 @@ import Link from "next/link"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { Survey as PrismaSurvey } from "@prisma/client" // ✅ Asegúrate de importar SurveyStatus
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Search, FileText, ExternalLink, Eye, PlusCircle } from "lucide-react"
+import { Search, FileText, ExternalLink, Eye, PlusCircle, PencilIcon, EyeIcon } from "lucide-react"
 import { SurveyResponsesBarChart } from "@/components/charts/chart-bar-interactive"
 import Loader from "@/components/loaders/loader"
 
@@ -80,7 +80,7 @@ export default function SurveysListPage() {
             </Button>
           </Link>
         </div>
-
+{/* 
         {loadingSurveys ? (
           <Card className="col-span-full">
             <CardHeader>
@@ -97,7 +97,7 @@ export default function SurveysListPage() {
           </Alert>
         ) : (
           <SurveyResponsesBarChart surveys={allSurveys} />
-        )}
+        )} */}
 
         <Card className="border-0 shadow-sm overflow-hidden">
           <CardContent className="p-0">
@@ -231,26 +231,12 @@ export default function SurveysListPage() {
                           </span>
                         </TableCell>
                         <TableCell className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Link href={`/admin/surveys/${survey.id}/edit`} passHref>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 hover:bg-blue-100 hover:text-blue-700"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                                <span className="sr-only">Editar encuesta</span>
-                              </Button>
+                          <div className="flex items-center justify-end gap-x-4">
+                            <Link href={`/admin/surveys/${survey.id}/edit`} passHref className="text-gray-500 hover:text-gray-700">
+                                <PencilIcon className="w-5 h-5"></PencilIcon>
                             </Link>
                             <Link href={`/admin/responses/${survey.id}`} passHref>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 hover:bg-green-100 hover:text-green-700"
-                              >
-                                <Eye className="w-4 h-4" />
-                                <span className="sr-only">Ver respuestas</span>
-                              </Button>
+                                <EyeIcon className="w-5 h-5"/>  
                             </Link>
                           </div>
                         </TableCell>

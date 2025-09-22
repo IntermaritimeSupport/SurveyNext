@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { PlusCircle, Search, Eye, Edit, Trash2, MoreHorizontal, Loader2 } from "lucide-react"
+import { PlusCircle, Search, Eye, Edit, Trash2, MoreHorizontal, Loader2, PencilIcon, EyeIcon } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { LinkSharing } from "@/components/admin/link-sharing"
@@ -169,8 +169,8 @@ export default function SurveysPage() {
                       <TableHead className="w-[120px]">Enlace</TableHead>
                       <TableHead className="w-[120px]">Anonimo</TableHead>
                       <TableHead className="w-[100px]">Creada</TableHead>
-                      <TableHead className="w-[200px]">Compartir</TableHead>
-                      <TableHead className="w-[80px]">Acciones</TableHead>
+                      <TableHead className="w-[80px]">Compartir</TableHead>
+                      <TableHead className="w-[80px] text-center">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -217,35 +217,18 @@ export default function SurveysPage() {
                             isActive={survey.status === SurveyStatus.PUBLISHED}
                           />
                         </TableCell>
-                        <TableCell className="py-3">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                                <MoreHorizontal className="h-3 w-3" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild>
-                                <Link href={`/survey/${survey.customLink}`}>
-                                  <Eye className="h-3 w-3 mr-2" />
-                                  Ver Encuesta
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <Link href={`/admin/surveys/${survey.id}/edit`}>
-                                  <Edit className="h-3 w-3 mr-2" />
-                                  Editar
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDelete(survey.id)}
-                                className="text-red-600 focus:text-red-600"
-                              >
-                                <Trash2 className="h-3 w-3 mr-2" />
-                                Eliminar
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                        <TableCell className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-x-4">
+                            <Link href={`/admin/surveys/${survey.id}/edit`} passHref className="text-gray-500 hover:text-gray-700">
+                              <PencilIcon className="w-5 h-5"></PencilIcon>
+                            </Link>
+                            <Link href={`/admin/responses/${survey.id}`} passHref>
+                              <EyeIcon className="w-5 h-5"/>  
+                            </Link>
+                            <span onClick={() => handleDelete(survey.id)}>
+                              <Trash2 className="w-5 h-5 text-red-500"/>  
+                            </span>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
