@@ -94,7 +94,7 @@ export function LinkManager({ currentLink, surveyId, onLinkChange }: LinkManager
 
   const openPreview = () => {
     if (validation.valid && inputValue) {
-      window.open(fullUrl, "_blank")
+      window.open(fullUrl)
     }
   }
 

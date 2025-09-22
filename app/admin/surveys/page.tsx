@@ -226,7 +226,7 @@ export default function SurveysPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem asChild>
-                                <Link href={`/survey/${survey.customLink}`} target="_blank">
+                                <Link href={`/survey/${survey.customLink}`}>
                                   <Eye className="h-3 w-3 mr-2" />
                                   Ver Encuesta
                                 </Link>

@@ -29,7 +29,7 @@ export function LinkSharing({ surveyTitle, customLink, isActive }: LinkSharingPr
   }
 
   const handleOpenSurvey = () => {
-    window.open(surveyUrl, "_blank")
+    window.open(surveyUrl)
   }
 
   if (!isActive) {
