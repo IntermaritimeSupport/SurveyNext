@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import QuestionItemEditor from "./QuestionItemEditor"; // Importa el componente para editar una pregunta individual
+import QuestionItemEditor from "./QuestionItemEditor"; 
 import { QuestionData } from "./survey-manager";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 interface QuestionManagerProps {
-  surveyId: string; // El ID de la encuesta a la que pertenecen estas preguntas
+  surveyId: string;
 }
 
 export default function QuestionManager({ surveyId }: QuestionManagerProps) {
@@ -21,31 +21,32 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
       try {
         const response = await fetch(`${API_BASE_URL}/api/surveys/${surveyId}/questions`);
         if (response.ok) {
-          const data: QuestionData[] = await response.json(); // Prisma ya devuelve JSON parseado
+          const data: QuestionData[] = await response.json();
           const sortedQuestions = data ? data.sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
-          setQuestions(sortedQuestions.length > 0 ? sortedQuestions : []);
+          setQuestions(sortedQuestions);
         } else {
           console.error("Error al cargar las preguntas:", response.statusText);
           alert("Error al cargar las preguntas.");
-          setQuestions([]); // Limpiar en caso de error
+          setQuestions([]);
         }
       } catch (error) {
         console.error("Error al cargar las preguntas:", error);
         alert("Error de red al cargar las preguntas.");
-        setQuestions([]); // Limpiar en caso de error
+        setQuestions([]);
       } finally {
         setQuestionsLoading(false);
       }
     }
+
     if (surveyId) {
       fetchQuestions();
     } else {
-      setQuestionsLoading(false); // No hay surveyId, no hay preguntas que cargar
+      setQuestionsLoading(false);
       setQuestions([]);
     }
   }, [surveyId]);
 
-  // Manejar el envío del formulario de preguntas (crear/actualizar en lote)
+  // Guardar preguntas
   const handleQuestionsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -58,15 +59,13 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/surveys/${surveyId}/questions`, {
-        method: "POST", // Usamos POST para enviar un batch de preguntas para sincronizar
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ questions }), // Prisma lo gestiona como Json, no necesitamos stringify aquí
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questions }),
       });
 
       if (response.ok) {
-        const updatedQuestions: QuestionData[] = await response.json(); // Prisma ya devuelve JSON parseado
+        const updatedQuestions: QuestionData[] = await response.json();
         setQuestions(updatedQuestions.sort((a, b) => (a.order || 0) - (b.order || 0)));
         alert("Preguntas guardadas exitosamente.");
       } else {
@@ -81,16 +80,16 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
     }
   };
 
-  // Función para añadir una nueva pregunta al estado local
+  // Agregar nueva pregunta
   const addQuestion = useCallback(() => {
-    setQuestions((prevQuestions) => {
-      const newOrder = prevQuestions.length > 0 ? Math.max(...prevQuestions.map(q => q.order || 0)) + 1 : 0;
+    setQuestions((prev) => {
+      const newOrder = prev.length > 0 ? Math.max(...prev.map((q) => q?.order || 0)) + 1 : 1;
       return [
-        ...prevQuestions,
+        ...prev,
         {
           title: "",
           description: "",
-          type: "TEXT", // Asegúrate de que este sea un valor válido de QuestionType
+          type: "TEXT",
           required: false,
           order: newOrder,
           options: null,
@@ -100,50 +99,67 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
     });
   }, []);
 
-  // Función para eliminar una pregunta (localmente y en el servidor si tiene ID)
+  // Eliminar pregunta
   const removeQuestion = useCallback(async (index: number, questionId?: string) => {
-    if (questionId && window.confirm("¿Estás seguro de que quieres eliminar esta pregunta? Esta acción es irreversible.")) {
+    if (questionId && window.confirm("¿Estás seguro de que quieres eliminar esta pregunta?")) {
       try {
         const response = await fetch(`${API_BASE_URL}/api/questions/${questionId}`, {
           method: "DELETE",
         });
-        if (!response.ok) {
-          throw new Error("Error al eliminar la pregunta en el servidor.");
-        }
+        if (!response.ok) throw new Error("Error al eliminar en el servidor.");
+
         alert("Pregunta eliminada exitosamente.");
-        setQuestions((prevQuestions) => prevQuestions.filter((_, i) => i !== index));
+        setQuestions((prev) =>
+          prev.filter((_, i) => i !== index).map((q, i) => ({ ...q, order: i + 1 }))
+        );
       } catch (error) {
         console.error("Error al eliminar pregunta:", error);
         alert("No se pudo eliminar la pregunta. Inténtalo de nuevo.");
       }
     } else if (!questionId) {
-      setQuestions((prevQuestions) => prevQuestions.filter((_, i) => i !== index));
+      setQuestions((prev) =>
+        prev.filter((_, i) => i !== index).map((q, i) => ({ ...q, order: i + 1 }))
+      );
     }
   }, []);
 
-  // Función para actualizar un campo específico de una pregunta (pasada a QuestionItemEditor)
-  // Función para actualizar un campo específico de una pregunta (pasada a QuestionItemEditor)
-  const updateQuestion = useCallback((index: number, field: keyof QuestionData, value: any) => {
-    setQuestions((prevQuestions) =>
-      prevQuestions.map((q, i) =>
-        i === index
-          ? {
-            ...q,
-            [field]: value,
-            // Si el tipo no es de opciones, borramos options
-            ...(field === "type" && !["MULTIPLE_CHOICE", "CHECKBOXES", "DROPDOWN"].includes(value as string) && { options: null }),
-            // Si el tipo es de opciones, inicializamos con [{label, value}]
-            ...(field === "type" && ["MULTIPLE_CHOICE", "CHECKBOXES", "DROPDOWN"].includes(value as string) && {
-              options: q.options && q.options.length > 0 ? q.options : [{ label: "", value: "" }]
-            }),
-            // Limpiar validación si el tipo no aplica
-            ...(field === "type" && !["TEXT", "TEXTAREA", "NUMBER", "EMAIL", "PHONE", "URL", "DATE", "TIME"].includes(value as string) && { validation: null }),
-          }
-          : q
-      ).sort((a, b) => (a.order || 0) - (b.order || 0))
-    );
-  }, []);
+  // Actualizar pregunta
+  const updateQuestion = useCallback(
+    (index: number, field: keyof QuestionData, value: any) => {
+      setQuestions((prev) => {
+        let updated = prev.map((q, i) =>
+          i === index
+            ? {
+                ...q,
+                [field]: value,
+                ...(field === "type" &&
+                  !["MULTIPLE_CHOICE", "CHECKBOXES", "DROPDOWN"].includes(value as string) && {
+                    options: null,
+                  }),
+                ...(field === "type" &&
+                  ["MULTIPLE_CHOICE", "CHECKBOXES", "DROPDOWN"].includes(value as string) && {
+                    options: q.options && q.options.length > 0 ? q.options : [{ label: "", value: "" }],
+                  }),
+                ...(field === "type" &&
+                  !["TEXT", "TEXTAREA", "NUMBER", "EMAIL", "PHONE", "URL", "DATE", "TIME"].includes(
+                    value as string
+                  ) && { validation: null }),
+              }
+            : q
+        );
 
+        // ✅ Si se actualiza "order", normalizamos
+        if (field === "order") {
+          updated = updated
+            .sort((a, b) => (a.order || 0) - (b.order || 0))
+            .map((q, i) => ({ ...q, order: i + 1 }));
+        }
+
+        return updated;
+      });
+    },
+    []
+  );
 
   if (questionsLoading) {
     return <div className="text-center py-8 text-gray-600">Cargando preguntas...</div>;
@@ -156,6 +172,7 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
           Aún no hay preguntas para esta encuesta. ¡Añade la primera!
         </p>
       )}
+
       {questions.map((question, index) => (
         <QuestionItemEditor
           key={question.id || `new-${index}`}
@@ -185,5 +202,5 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
         </button>
       </div>
     </form>
-  )
+  );
 }

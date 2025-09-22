@@ -196,6 +196,11 @@ export async function POST(request: NextRequest, { params: resolvedParams }: Pro
           break;
 
         case QuestionType.NUMBER:
+          processedValue = Number(processedValue);
+          if (isNaN(processedValue)) {
+            return NextResponse.json({ message: `La respuesta para '${question.title}' debe ser un número válido.` }, { status: 400, headers: withCors(origin) });
+          }
+          break;
         case QuestionType.SCALE:
         case QuestionType.RATING:
           processedValue = Number(processedValue);

@@ -1,4 +1,3 @@
-// --- START OF FILE question-renderer.tsx ---
 "use client"
 
 import { QuestionType as PrismaQuestionType } from "@prisma/client"
@@ -10,8 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar, Clock } from "lucide-react"
-// import { Star } from 'lucide-react' // Quité Star, ya que no se usa
+import { Calendar, Circle, Clock, Star } from 'lucide-react' // Incluí Star de nuevo
 
 interface PublicQuestion {
   id: string
@@ -43,7 +41,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
       ? []
       : ""),
   )
-
+  console.log(question)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [fileNameDisplay, setFileNameDisplay] = useState<string>("")
 
@@ -69,7 +67,11 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
         setFileNameDisplay("")
       }
     } else {
-      if (JSON.stringify(localValue) !== JSON.stringify(initialVal)) {
+      // Para RATING, si initialVal es "", asegúrate de que localValue sea null o el valor por defecto si lo hay.
+      // Esto evita que "0" se muestre como "no calificado" si el valor inicial es una cadena vacía.
+      if (question.type === PrismaQuestionType.RATING && initialVal === "") {
+        setLocalValue(null); // O un valor por defecto si prefieres
+      } else if (JSON.stringify(localValue) !== JSON.stringify(initialVal)) {
         setLocalValue(initialVal)
       }
     }
@@ -168,8 +170,6 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
           </div>
         )
 
-
-
       case PrismaQuestionType.PHONE:
         return (
           <Input
@@ -252,117 +252,91 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
         )
 
       case PrismaQuestionType.RATING:
-        const min = question.validation?.min || 1
-        const max = question.validation?.max || 10
+        const minRating = question.validation?.min || 1
+        const maxRating = question.validation?.max || 5
+        const currentRating = typeof localValue === 'number' ? localValue : 0; // Asegurarse de que sea un número
 
-        const getEmojiForRating = (value: number, total: number) => {
-          const percentage = (value - 1) / (total - 1)
-
-          if (percentage <= 0.2) {
-            // Very sad - red
-            return {
-              bg: "bg-red-500",
-              border: "border-red-600",
-              face: (
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <circle cx="8" cy="9" r="1.5" />
-                  <circle cx="16" cy="9" r="1.5" />
-                  <path
-                    d="M8 17c0-2.5 1.79-4 4-4s4 1.5 4 4"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    fill="none"
-                    transform="scale(1,-1) translate(0,-24)"
-                  />
-                </svg>
-              ),
-            }
-          } else if (percentage <= 0.4) {
-            // Sad - orange
-            return {
-              bg: "bg-orange-500",
-              border: "border-orange-600",
-              face: (
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <circle cx="8" cy="9" r="1.5" />
-                  <circle cx="16" cy="9" r="1.5" />
-                  <path
-                    d="M8 15c1-1 2-1.5 4-1.5s3 0.5 4 1.5"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    fill="none"
-                    transform="scale(1,-1) translate(0,-24)"
-                  />
-                </svg>
-              ),
-            }
-          } else if (percentage <= 0.6) {
-            // Neutral - yellow
-            return {
-              bg: "bg-yellow-500",
-              border: "border-yellow-600",
-              face: (
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <circle cx="8" cy="9" r="1.5" />
-                  <circle cx="16" cy="9" r="1.5" />
-                  <line x1="8" y1="15" x2="16" y2="15" stroke="currentColor" strokeWidth="1.5" />
-                </svg>
-              ),
-            }
-          } else if (percentage <= 0.8) {
-            // Happy - light green
-            return {
-              bg: "bg-lime-500",
-              border: "border-lime-600",
-              face: (
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <circle cx="8" cy="9" r="1.5" />
-                  <circle cx="16" cy="9" r="1.5" />
-                  <path d="M8 13c1 2 2 3 4 3s3-1 4-3" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                </svg>
-              ),
-            }
-          } else {
-            // Very happy - green
-            return {
-              bg: "bg-green-500",
-              border: "border-green-600",
-              face: (
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <circle cx="8" cy="9" r="1.5" />
-                  <circle cx="16" cy="9" r="1.5" />
-                  <path d="M7 13c1.5 3 2.5 4 5 4s3.5-1 5-4" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                </svg>
-              ),
-            }
-          }
-        }
-      case PrismaQuestionType.SCALE:
-        const min2 = question.validation?.min || 1
-        const max2 = question.validation?.max || 10
         return (
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2 justify-center">
-              {Array.from({ length: max2 - min2 + 1 }, (_, i) => {
-                const val = min2 + i
-                const isSelected = localValue === val
-                return (
-                  <Button
-                    key={i}
-                    type="button"
-                    variant={isSelected ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleValueChange(val)}
-                    className="w-12 h-12"
-                  >
-                    {val}
-                  </Button>
-                )
-              })}
-            </div>
-            {localValue && <div className="text-center text-sm text-slate-600">Seleccionado: {localValue}</div>}
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: maxRating - minRating + 1 }, (_, i) => {
+              const ratingValue = minRating + i
+              return (
+                <div className="flex flex-col items-center gap-x-2 px-4" key={ratingValue}>
+                <Circle
+                  key={ratingValue}
+                  className={`cursor-pointer ${
+                    ratingValue <= currentRating ? "text-yellow-500 fill-yellow-500" : "text-gray-300"
+                  }`}
+                  onClick={() => handleValueChange(ratingValue)}
+                  size={28} // Ajusta el tamaño de la estrella según tu preferencia
+                >
+                </Circle>
+                <span>{ratingValue}</span>
+                </div>
+              )
+            })}
+             {currentRating > 0 && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => handleValueChange(null)} // Permite quitar la calificación
+                className="ml-2 text-red-500 hover:text-red-700"
+              >
+                Clear
+              </Button>
+            )}
           </div>
         )
+
+      case PrismaQuestionType.SCALE:
+        const minScale = question.validation?.min || 1
+        const maxScale = question.validation?.max || 10
+        return (
+          <div className="space-y-6 select-none">
+            <div className="relative px-4">
+              <input
+                type="range"
+                min={minScale}
+                max={maxScale}
+                value={localValue || minScale}
+                onChange={(e) => handleValueChange(Number.parseInt(e.target.value))}
+                className="w-full h-3 bg-blue-200 rounded-lg appearance-none cursor-pointer slider"
+              />
+
+              {/* Marcadores de escala */}
+              <div className="flex justify-between mt-2 px-1">
+                {Array.from({ length: maxScale - minScale + 1 }, (_, i) => {
+                  const val = minScale + i
+                  return (
+                    <span
+                      key={i}
+                      className={`text-xs ${localValue === val ? "text-primary font-semibold" : "text-stone-500"}`}
+                    >
+                      {val}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Panel informativo */}
+            <div className="bg-card border rounded-lg p-2 select-none">
+              <div className="flex justify-between text-sm text-card-foreground">
+                <span>
+                  Min: <span className="font-semibold font-mono">{minScale}</span>
+                </span>
+                {/* Valor actual destacado */}
+                <span className="text-center">
+                  <div className="text-xl font-bold text-primary">{localValue || minScale}</div>
+                </span>
+                <span>
+                  Max: <span className="font-semibold font-mono">{maxScale}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        )
+
       case PrismaQuestionType.FILE_UPLOAD:
         return (
           <div>

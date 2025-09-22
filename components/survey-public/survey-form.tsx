@@ -13,6 +13,7 @@ import { ProgressBar } from "./progress-bar"
 import { QuestionType as PrismaQuestionType, type SurveyStatus } from "@prisma/client"
 import { CheckCircle, ChevronLeft, ChevronRight, Loader2, Send } from "lucide-react"
 import type { QuestionOption } from "../survey-builder/survey-manager"
+import Imagenes from "@/lib/images"
 
 interface PublicSurvey {
   id: string
@@ -87,24 +88,26 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
   const isLastQuestionPage = currentPageIndex === totalQuestionPages - 1
 
   const validateAnswer = (question: PublicQuestion, answerValue: any): string | null => {
+    // Determine if the answer is effectively empty for validation purposes
     const isAnswerEmpty =
       answerValue === undefined ||
       answerValue === null ||
       (typeof answerValue === "string" && answerValue.trim() === "") ||
       (Array.isArray(answerValue) && answerValue.length === 0) ||
-      (typeof answerValue === "object" &&
-        answerValue !== null &&
-        Object.keys(answerValue).length === 0 &&
-        question.type !== PrismaQuestionType.FILE_UPLOAD)
+      (typeof answerValue === "object" && answerValue !== null && Object.keys(answerValue).length === 0 && question.type !== PrismaQuestionType.FILE_UPLOAD);
+      // For FILE_UPLOAD, an empty object could still be valid if it means "no file uploaded yet"
+      // but if the question is required, the `fileInfo` object must exist and contain at least fileName/fileUrl
 
     if (question.required && isAnswerEmpty) {
       return "This question is required."
     }
 
+    // If not required and empty, it's valid.
     if (!question.required && isAnswerEmpty) {
       return null
     }
 
+    // Now, apply specific validations only if an answer is provided (or if required and not empty)
     switch (question.type) {
       case PrismaQuestionType.EMAIL:
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -127,26 +130,32 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
       case PrismaQuestionType.NUMBER:
         const numValue = Number(answerValue)
-        if (isNaN(numValue)) {
+        if (isNaN(numValue)) { // Handles null, undefined, non-numeric strings
           return "Must be a valid number."
         }
-        if (question.validation?.min && numValue < question.validation.min) {
-          return `Minimum value is ${question.validation.min}.`
+        const minNum = question.validation?.min ?? -Infinity;
+        const maxNum = question.validation?.max ?? Infinity;
+        if (numValue < minNum) {
+          return `Minimum value is ${minNum}.`
         }
-        if (question.validation?.max && numValue > question.validation.max) {
-          return `Maximum value is ${question.validation.max}.`
+        if (numValue > maxNum) {
+          return `Maximum value is ${maxNum}.`
         }
         break
 
       case PrismaQuestionType.URL:
-        const urlRegex =
-          /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/[a-zA-Z0-9]+\.[^\s]{2,}|[a-zA-Z0-9]+\.[^\s]{2,})$/i
-        if (typeof answerValue === "string" && !urlRegex.test(answerValue)) {
+        // A more robust URL regex or URL constructor check
+        try {
+          if (typeof answerValue === "string" && answerValue.trim() !== "") {
+            new URL(answerValue)
+          }
+        } catch (e) {
           return "Please enter a valid URL."
         }
         break
 
       case PrismaQuestionType.PHONE:
+        // Simple phone regex, consider using a library for international numbers if needed
         const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/im
         if (typeof answerValue === "string" && !phoneRegex.test(answerValue)) {
           return "Please enter a valid phone number."
@@ -154,23 +163,50 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
         break
 
       case PrismaQuestionType.DATE:
-        if (typeof answerValue === "string" && !/^\d{4}-\d{2}-\d{2}$/.test(answerValue)) {
-          return `Invalid date format (YYYY-MM-DD).`
-        }
-        if (typeof answerValue === "string" && isNaN(new Date(answerValue).getTime())) {
-          return `Invalid date format.`
+        if (typeof answerValue === "string") {
+          // Basic YYYY-MM-DD format check
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(answerValue)) {
+            return `Invalid date format (YYYY-MM-DD).`
+          }
+          const dateValue = new Date(answerValue)
+          if (isNaN(dateValue.getTime())) { // Check for valid date parse
+            return `Invalid date.`
+          }
+          const minDate = question.validation?.minDate ? new Date(question.validation.minDate) : null;
+          const maxDate = question.validation?.maxDate ? new Date(question.validation.maxDate) : null;
+
+          if (minDate && dateValue < minDate) {
+              return `Date cannot be before ${question?.validation?.minDate}.`;
+          }
+          if (maxDate && dateValue > maxDate) {
+              return `Date cannot be after ${question?.validation?.maxDate}.`;
+          }
         }
         break
 
       case PrismaQuestionType.TIME:
-        if (typeof answerValue === "string" && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(answerValue)) {
-          return `Invalid time format (HH:mm).`
+        if (typeof answerValue === "string") {
+          // Basic HH:mm format check
+          if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(answerValue)) {
+            return `Invalid time format (HH:mm).`
+          }
+          // Additional minTime/maxTime validation could be added if needed
+          const minTime = question.validation?.minTime; // e.g., "08:00"
+          const maxTime = question.validation?.maxTime; // e.g., "17:00"
+
+          if (minTime && answerValue < minTime) {
+            return `Time cannot be before ${minTime}.`;
+          }
+          if (maxTime && answerValue > maxTime) {
+            return `Time cannot be after ${maxTime}.`;
+          }
         }
         break
 
       case PrismaQuestionType.MULTIPLE_CHOICE:
       case PrismaQuestionType.DROPDOWN:
         const dropdownOptions = (question.options as QuestionOption[] | null) || []
+        // Ensure the selected value is one of the valid options
         if (!dropdownOptions.some((opt) => opt.value === answerValue)) {
           return "The selected option is invalid."
         }
@@ -185,18 +221,36 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
         if (!answerValue.every((val: any) => validCheckboxValues.includes(val))) {
           return "One or more selected options are invalid."
         }
+        // You could also add a minSelections / maxSelections validation here
+        if (question.validation?.minSelections && answerValue.length < question.validation.minSelections) {
+          return `Please select at least ${question.validation.minSelections} options.`;
+        }
+        if (question.validation?.maxSelections && answerValue.length > question.validation.maxSelections) {
+          return `Please select at most ${question.validation.maxSelections} options.`;
+        }
         break
 
       case PrismaQuestionType.RATING:
-      case PrismaQuestionType.SCALE:
-        const ratingScaleValue = Number(answerValue)
-        if (isNaN(ratingScaleValue)) {
+        const ratingValue = Number(answerValue)
+        if (isNaN(ratingValue)) { // Handles null, undefined, non-numeric strings
           return "Must be a valid number."
         }
-        const minVal = question.validation?.min || 1
-        const maxVal = question.validation?.max || (question.type === PrismaQuestionType.RATING ? 10 : 10)
-        if (ratingScaleValue < minVal || ratingScaleValue > maxVal) {
-          return `Must be between ${minVal} and ${maxVal}.`
+        const minRatingVal = question.validation?.min ?? 1
+        const maxRatingVal = question.validation?.max ?? 5
+        if (ratingValue < minRatingVal || ratingValue > maxRatingVal) {
+          return `Must be between ${minRatingVal} and ${maxRatingVal}.`
+        }
+        break
+
+      case PrismaQuestionType.SCALE: // ✅ CORREGIDO: Usando variables locales correctas (minScaleVal, maxScaleVal)
+        const scaleValue = Number(answerValue)
+        if (isNaN(scaleValue)) { // Handles null, undefined, non-numeric strings
+          return "Must be a valid number."
+        }
+        const minScaleVal = question.validation?.min ?? 1
+        const maxScaleVal = question.validation?.max ?? 10
+        if (scaleValue < minScaleVal || scaleValue > maxScaleVal) {
+          return `Must be between ${minScaleVal} and ${maxScaleVal}.`
         }
         break
 
@@ -204,23 +258,34 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
         if (typeof answerValue !== "object" || answerValue === null || !answerValue.fileName || !answerValue.fileUrl) {
           return "Must attach a valid file."
         }
+        // Additional file validations (size, type)
+        const maxFileSize = question.validation?.maxSize; // in bytes
+        const allowedTypes = question.validation?.allowedTypes as string[]; // array of mime types
+        if (maxFileSize && answerValue.fileSize && answerValue.fileSize > maxFileSize) {
+          return `File size exceeds the maximum of ${maxFileSize / (1024 * 1024)}MB.`;
+        }
+        if (allowedTypes && answerValue.fileType && !allowedTypes.includes(answerValue.fileType)) {
+          return `File type not allowed. Allowed types: ${allowedTypes.join(', ')}.`;
+        }
         break
 
       case PrismaQuestionType.SIGNATURE:
-        if (typeof answerValue !== "string" || answerValue.length < 10) {
-          return "The signature is invalid."
+        if (typeof answerValue !== "string" || answerValue.length < 10) { // Assuming a base64 string or similar
+          return "The signature is invalid or too short."
         }
         break
 
       case PrismaQuestionType.MATRIX:
+        // Matrix validation can be complex and depends on its structure
         if (
           typeof answerValue !== "object" ||
           answerValue === null ||
-          Array.isArray(answerValue) ||
+          Array.isArray(answerValue) || // Assuming it's an object mapping row to column values
           Object.keys(answerValue).length === 0
         ) {
           return "Invalid matrix response format."
         }
+        // Further validation would depend on specific matrix design (e.g., all rows answered)
         break
     }
 
@@ -264,7 +329,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
         return
       }
       setIsShowingEmailStep(false)
-      setCurrentPageIndex(0)
+      setCurrentPageIndex(0) // Reset to first question page after email
       return
     }
 
@@ -281,7 +346,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
     if (hasPageErrors) {
       setValidationErrors(newPageErrors)
-      setSubmissionError("Please correct the errors in the required questions.")
+      setSubmissionError("Please correct the errors in the questions.")
       return
     }
 
@@ -289,7 +354,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
     if (enablePagination && !isLastQuestionPage) {
       setCurrentPageIndex((prev) => prev + 1)
     } else {
-      handleSubmit() // Si no hay paginación o es la última página, enviar
+      handleSubmit()
     }
   }
 
@@ -298,20 +363,19 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
     setSubmissionError(null)
 
     if (isShowingEmailStep) {
-      return
+      return // No hay paso anterior al email si es el primer paso
     }
 
-    // ✅ Lógica de paginación condicional
-    if (enablePagination && currentPageIndex === 0 && isEmailRequired) {
+    // Si estamos en la primera página de preguntas y el email es requerido, volvemos al paso del email
+    if (currentPageIndex === 0 && isEmailRequired) {
       setIsShowingEmailStep(true)
       return
     }
 
-    if (enablePagination && currentPageIndex > 0) {
+    // Solo retrocede si hay páginas anteriores
+    if (currentPageIndex > 0) {
       setCurrentPageIndex((prev) => prev - 1)
     }
-    // Si no hay paginación, el botón "Anterior" no debería ser visible o debería hacer algo diferente.
-    // Esto ya se maneja con el disabled prop en el botón.
   }
 
   const handleSubmit = async () => {
@@ -397,7 +461,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                 <br />
                 <strong>Completed:</strong> {new Date().toLocaleString()}
                 <br />
-                <strong>Questions answered:</strong> {Object.keys(currentAnswers).length}
+                <strong>Questions answered:</strong> {currentAnswers.size}
               </p>
             </div>
             <Button onClick={() => (window.location.href = "/")} variant="outline" className="w-full bg-transparent">
@@ -412,8 +476,9 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-3 sm:p-4 lg:p-6">
       <div className="max-w-full sm:max-w-2xl lg:max-w-3xl mx-auto">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-xl shadow-lg mb-1">
-          <div className="px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6 text-center">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-xl shadow-lg mb-1 flex items-center justify-start border border-slate-200 px-4">
+          <img src={Imagenes?.icsLogo || ""} height={75} width={75} alt="ics.logo" className="rounded-md object-center"/>
+          <div className="px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6 text-start">
             <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-white mb-2">{survey.title}</h1>
             {survey.description && (
               <p className="text-blue-100 text-xs sm:text-sm leading-relaxed max-w-full sm:max-w-xl lg:max-w-2xl mx-auto">
