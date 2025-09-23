@@ -11,6 +11,7 @@ import Link from "next/link"
 
 // Importar los tipos de Prisma
 import type { Survey as PrismaSurvey } from "@prisma/client"
+import Loader from "../loaders/loader"
 
 // Define la URL base de la API (misma lógica que en auth-context)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""
@@ -74,8 +75,7 @@ export function RecentSurveys() {
           <CardTitle className="text-base">Encuestas Recientes</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-6">
-          <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
-          <p className="ml-2 text-slate-500 text-sm">Cargando encuestas...</p>
+          <Loader/>
         </CardContent>
       </Card>
     )

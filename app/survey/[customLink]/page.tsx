@@ -15,6 +15,7 @@ import Link from "next/link"
 
 // Importar los tipos de Prisma
 import { QuestionType as PrismaQuestionType } from '@prisma/client';
+import Loader from "@/components/loaders/loader"
 
 // Re-definir las interfaces para que coincidan con la respuesta del endpoint /api/public/survey-questions/[customLink]
 interface PublicSurvey {
@@ -89,11 +90,8 @@ export default function SurveyPublicPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
-          <p className="text-slate-600">Cargando encuesta...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[100vh]">
+        <Loader/>
       </div>
     )
   }

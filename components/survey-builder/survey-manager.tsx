@@ -9,6 +9,7 @@ import Loader from "../loaders/loader";
 import { Pencil, Settings } from "lucide-react";
 import InlineEditable from "../boton/inline-editable";
 import Imagenes from "@/lib/images";
+import { toast } from "../ui/use-toast";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -82,14 +83,25 @@ export default function SurveyManager() {
               startDate: data.startDate ? new Date(data.startDate).toISOString().split('T')[0] : '',
               endDate: data.endDate ? new Date(data.endDate).toISOString().split('T')[0] : '',
             });
+
           } else {
             console.error("Error al cargar la encuesta:", response.statusText);
-            alert("Error al cargar la encuesta.");
+            toast({
+              title: "Error",
+              description: "Error al cargar la encuesta.",
+              duration: 5000,
+              variant: "destructive",
+            });
             router.push('/admin/surveys');
           }
         } catch (error) {
           console.error("Error al cargar la encuesta:", error);
-          alert("Error de red al cargar la encuesta.");
+          toast({
+            title: "Error",
+            description: "Error de red al cargar la encuesta.",
+            duration: 5000,
+            variant: "destructive",
+          });
           router.push('/admin/surveys');
         } finally {
           setSurveyLoading(false);
@@ -143,15 +155,30 @@ export default function SurveyManager() {
           ...prev,
           isPublished: result.status === "PUBLISHED"
         }));
-        alert(`Encuesta ${currentSurveyId ? 'actualizada' : 'creada'} exitosamente.`);
+        toast({
+          title: `Encuesta ${currentSurveyId ? 'actualizada' : 'creada'} exitosamente.`,
+          description: `La encuesta "${name}" ha sido ${currentSurveyId ? "actualizado" : "creado"} exitosamente.`,
+          duration: 5000,
+          variant: "success",
+        });
         setActiveTab("questions");
       } else {
         const error = await response.json();
-        alert(error.message || `Error al ${currentSurveyId ? 'actualizar' : 'crear'} la encuesta`);
+        toast({
+          title: `Error al ${currentSurveyId ? 'actualizar' : 'crear'} la encuesta`,
+          description: `Error al ${currentSurveyId ? 'actualizar' : 'crear'} la encuesta`,
+          duration: 5000,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error:", error);
-      alert(`Error de red al ${currentSurveyId ? 'actualizar' : 'crear'} la encuesta`);
+      toast({
+        title: `Error de red al ${currentSurveyId ? 'actualizar' : 'crear'} la encuesta`,
+        description: `Error de red al ${currentSurveyId ? 'actualizar' : 'crear'} la encuesta`,
+        duration: 5000,
+        variant: "destructive",
+      });
     } finally {
       setSurveyLoading(false);
     }
@@ -188,26 +215,26 @@ export default function SurveyManager() {
     <div className="min-h-screen py-2">
       <div className="max-w-4xl mx-auto px-1">
         <div className="bg-gradient-to-r p-4 gap-x-6 from-blue-600 to-indigo-600 rounded-t-xl shadow-lg flex items-center justify-start  border-slate-200 px-4">
-          <img src={Imagenes?.icsLogo || ""} height={75} width={75} alt="ics.logo" className="rounded-md object-center"/>
+          <img src={Imagenes?.icsLogo || ""} height={75} width={75} alt="ics.logo" className="rounded-md object-center" />
 
-            <div className=" flex flex-col gap-y-2">
-              <InlineEditable
-                value={surveyData.title}
-                onChange={(newValue) => setSurveyData({ ...surveyData, title: newValue })}
-                placeholder="Ej: Encuesta de Satisfacción del Cliente"
-                as="input"
-                displayAs="h1"
-                className="text-white"
-              />
-              <InlineEditable
-                value={surveyData.description}
-                onChange={(newValue) => setSurveyData({ ...surveyData, description: newValue })}
-                placeholder="Describe el propósito de tu encuesta..."
-                as="textarea"
-                displayAs="p"
-                className="text-white/90"
-              />
-            </div>
+          <div className=" flex flex-col gap-y-2">
+            <InlineEditable
+              value={surveyData.title}
+              onChange={(newValue) => setSurveyData({ ...surveyData, title: newValue })}
+              placeholder="Ej: Encuesta de Satisfacción del Cliente"
+              as="input"
+              displayAs="h1"
+              className="text-white"
+            />
+            <InlineEditable
+              value={surveyData.description}
+              onChange={(newValue) => setSurveyData({ ...surveyData, description: newValue })}
+              placeholder="Describe el propósito de tu encuesta..."
+              as="textarea"
+              displayAs="p"
+              className="text-white/90"
+            />
+          </div>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col">
           <div className="mb-6 border-b border-gray-200">
@@ -281,7 +308,12 @@ export default function SurveyManager() {
                     type="button"
                     onClick={() => {
                       if (!surveyData.title.trim()) {
-                        alert("Primero escribe un título para generar el enlace");
+                        toast({
+                          title: `Primero escribe un título para generar el enlace`,
+                          description: `Primero escribe un título para generar el enlace`,
+                          duration: 5000,
+                          variant: "destructive",
+                        });
                         return;
                       }
                       setSurveyData({

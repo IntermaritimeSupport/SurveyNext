@@ -133,7 +133,6 @@ export default function SurveysPage() {
           {loading ? (
             <div className="flex flex-col items-center justify-center min-h-[60vh]">
               <Loader/>
-              <p className="text-xl text-gray-700">Cargando Encuestas...</p>
             </div>
           ) : (
             <>
