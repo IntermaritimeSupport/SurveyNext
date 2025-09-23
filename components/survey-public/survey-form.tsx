@@ -506,7 +506,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-3 sm:p-4 lg:p-6">
       <div className="max-w-full sm:max-w-2xl lg:max-w-3xl mx-auto">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-xl shadow-lg mb-1 flex items-center justify-start border border-slate-200 px-4">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-xl shadow-lg flex items-center justify-start  border-slate-200 px-4">
           <img src={Imagenes?.icsLogo || ""} height={75} width={75} alt="ics.logo" className="rounded-md object-center"/>
           <div className="px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6 text-start">
             <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-white mb-2">{survey.title}</h1>
@@ -517,14 +517,11 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
             )}
           </div>
         </div>
-
         {survey.showProgress && (
-          <div className="bg-white px-4 py-3 sm:px-6 sm:py-4 lg:px-8 border-x border-slate-200">
-            <ProgressBar current={currentStep} total={totalSteps} />
-          </div>
+          <ProgressBar current={currentStep} total={totalSteps} />
         )}
 
-        <div className="bg-white rounded-b-xl shadow-lg border border-slate-200">
+        <div className="bg-white rounded-b-xl shadow-lg  border-slate-200">
           <div className="p-4 sm:p-6 lg:p-8">
             {isShowingEmailStep ? (
               <div className="space-y-4 sm:space-y-6">

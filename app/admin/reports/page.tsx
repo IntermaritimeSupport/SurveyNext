@@ -114,7 +114,7 @@ export default function ReportsPage() {
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-gray-900">Dashboard de Reportes</h1>
+            <h1 className="text-4xl font-extrabold tracking-tight text-gray-900">Reportes</h1>
             <p className="text-lg text-gray-600 mt-2">Análisis detallado y métricas de tus encuestas.</p>
           </div>
           <Button onClick={handleGenerateReport} className="bg-green-600 hover:bg-green-700 text-white shadow-md">
@@ -122,13 +122,8 @@ export default function ReportsPage() {
             Generar Informe
           </Button>
         </div>
-
-        <Separator />
-
-        {/* Sección de Visión General (Métricas Clave) */}
         <section className="space-y-4">
-          <h2 className="text-2xl font-bold text-gray-800">Visión General</h2>
-          <p className="text-gray-600">Métricas clave que resumen el estado actual de tus encuestas.</p>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <SurveyOverviewCards
               title="Total de Encuestas"
@@ -153,10 +148,7 @@ export default function ReportsPage() {
           </div>
         </section>
 
-        <Separator />
-
-        {/* Sección de Gráficos de Alto Nivel */}
-        <section className="space-y-4">
+        <section className="space-y-4 bg-white/50 rounded-xl p-4">
           <h2 className="text-2xl font-bold text-gray-800">Análisis General</h2>
           <p className="text-gray-600">Gráficos que ofrecen una vista de alto nivel de tus datos.</p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

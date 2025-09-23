@@ -9,6 +9,7 @@ import { Analytics } from '@vercel/analytics/next';
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster";
 import Loader from "@/components/loaders/loader"; // Asumo que este es tu componente Loader
+import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -43,19 +44,26 @@ export default function RootLayout({
         <title>SurveyForms</title>
       </head>
       <body className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <AuthProvider>
-          {loading ? (
-            // APLICA LAS CLASES AQUÍ para centrar el loader
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
-              <Loader />
-            </div>
-          ) : (
-            <>
-              {children}
-              <Toaster />
-            </>
-          )}
-        </AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+
+          <AuthProvider>
+            {loading ? (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
+                <Loader />
+              </div>
+            ) : (
+              <>
+                {children}
+                <Toaster />
+              </>
+            )}
+          </AuthProvider>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

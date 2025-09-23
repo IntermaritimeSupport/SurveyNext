@@ -15,7 +15,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <ProtectedRoute requireAdmin>
-      <div className="flex h-screen bg-slate-50">
+      <div className="flex h-screen bg-gradient-to-r from-violet-600/5 to-blue-600/10">
         {/* Botón de menú móvil (hamburguesa) - visible solo en pantallas pequeñas */}
         <div className="absolute left-4 top-4 z-50 lg:hidden">
           <button
