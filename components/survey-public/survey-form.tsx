@@ -591,10 +591,12 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                   <div>
                     <Label htmlFor="fullName" className="text-sm font-medium text-slate-700">
                       Full Name
+                      {isEmailRequired && <span className="text-red-500 ml-1">*</span>}
                     </Label>
                     <Input
                       id="fullName"
                       type="text"
+                      required
                       value={respondentFullName}
                       onChange={(e) => {
                         setRespondentFullName(e.target.value)
@@ -626,9 +628,11 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                   <div>
                     <Label htmlFor="company" className="text-sm font-medium text-slate-700">
                       Company
+                      {isEmailRequired && <span className="text-red-500 ml-1">*</span>}
                     </Label>
                     <Input
                       id="company"
+                      required
                       type="text"
                       value={respondentCompany}
                       onChange={(e) => {
@@ -661,10 +665,12 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                   <div>
                     <Label htmlFor="position" className="text-sm font-medium text-slate-700">
                       Position
+                      {isEmailRequired && <span className="text-red-500 ml-1">*</span>}
                     </Label>
                     <Input
                       id="position"
                       type="text"
+                      required
                       value={respondentPosition}
                       onChange={(e) => {
                         setRespondentPosition(e.target.value)
@@ -696,10 +702,12 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                   <div>
                     <Label htmlFor="ships" className="text-sm font-medium text-slate-700">
                       Number of Ships
+                      {isEmailRequired && <span className="text-red-500 ml-1">*</span>}
                     </Label>
                     <Input
                       id="ships"
                       type="number" // Use type="number" for better mobile input and validation
+                      required
                       value={respondentShips}
                       onChange={(e) => {
                         setRespondentShips(e.target.value)
