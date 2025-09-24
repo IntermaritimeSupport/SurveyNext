@@ -42,6 +42,7 @@ export default function RootLayout({
     <html lang="es" className={`${inter.variable} ${notoSansSC.variable} antialiased`} suppressHydrationWarning>
       <head>
         <title>SurveyForms</title>
+        <link rel="shortcut icon" href="/ics-logo.jpg" type="image/x-icon" />
       </head>
       <body className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         <ThemeProvider
