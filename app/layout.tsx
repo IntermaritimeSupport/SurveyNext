@@ -39,7 +39,7 @@ export default function RootLayout({
   }, []);
 
   return (
-    <html lang="es" className={`${inter.variable} ${notoSansSC.variable} antialiased`}>
+    <html lang="es" className={`${inter.variable} ${notoSansSC.variable} antialiased`} suppressHydrationWarning>
       <head>
         <title>SurveyForms</title>
       </head>
