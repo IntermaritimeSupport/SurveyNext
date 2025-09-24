@@ -241,7 +241,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
         if (isNaN(ratingValue)) { // Handles null, undefined, non-numeric strings
           return "Must be a valid number."
         }
-        const minRatingVal = question.validation?.min ?? 1
+        const minRatingVal = question.validation?.min ?? 0
         const maxRatingVal = question.validation?.max ?? 5
         if (ratingValue < minRatingVal || ratingValue > maxRatingVal) {
           return `Must be between ${minRatingVal} and ${maxRatingVal}.`
@@ -253,7 +253,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
         if (isNaN(scaleValue)) { // Handles null, undefined, non-numeric strings
           return "Must be a valid number."
         }
-        const minScaleVal = question.validation?.min ?? 1
+        const minScaleVal = question.validation?.min ?? 0
         const maxScaleVal = question.validation?.max ?? 10
         if (scaleValue < minScaleVal || scaleValue > maxScaleVal) {
           return `Must be between ${minScaleVal} and ${maxScaleVal}.`

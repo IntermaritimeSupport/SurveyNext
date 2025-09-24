@@ -103,7 +103,7 @@ const renderQuestionInput = (question: Question): JSX.Element => {
       );
 
     case PrismaQuestionType.SCALE:
-      const min = question.validation?.min || 1;
+      const min = question.validation?.min || 0;
       const max = question.validation?.max || 10;
       return (
         <div className="flex flex-wrap gap-2">

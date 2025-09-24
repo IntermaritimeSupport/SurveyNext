@@ -289,7 +289,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
         )
 
       case PrismaQuestionType.SCALE:
-        const minScale = question.validation?.min || 1
+        const minScale = question.validation?.min || 0
         const maxScale = question.validation?.max || 10
         return (
           <div className="space-y-6 select-none">

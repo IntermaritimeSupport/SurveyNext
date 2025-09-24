@@ -108,7 +108,7 @@ function renderAnswerValue(answer: APIAnswer) {
         <div className="flex items-center gap-2">
           <input
             type="range"
-            min="1"
+            min="0"
             max="10"
             value={Number(value)}
             readOnly

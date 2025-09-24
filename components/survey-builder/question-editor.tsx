@@ -303,7 +303,7 @@ export function QuestionEditor({ question, onUpdate, onDelete, onCancel }: Quest
                 <Input
                   id="scaleMin"
                   type="number"
-                  value={localQuestion.validation?.min ?? 1}
+                  value={localQuestion.validation?.min ?? 0}
                   onChange={(e) =>
                     setLocalQuestion((prev) => ({
                       ...prev,
