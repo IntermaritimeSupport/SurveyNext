@@ -1,19 +1,13 @@
 "use client"
 
 import { useCallback, useState, useRef, useEffect } from "react"
-import type { QuestionData, QuestionOption } from "./survey-manager" // Ajusta esta ruta según donde hayas guardado tu archivo de tipos
+import type { QuestionData, QuestionOption } from "./survey-manager"
 
-// Define las opciones de tipo de pregunta con sus iconos y etiquetas.
 const questionTypeOptions = [
   { value: "MULTIPLE_CHOICE", label: "Opción", icon: "●" },
   { value: "TEXT", label: "Texto", icon: "T" },
-  { value: "RATING", label: "Calificación", icon: "👍" },
   { value: "DATE", label: "Fecha", icon: "📅" },
-  { value: "RANKING", label: "Clasificación", icon: "⇅" },
-  // { value: "LIKERT", label: "Likert", icon: "▦" },
-  // { value: "FILE_UPLOAD", label: "Cargar archivo", icon: "⤒" },
-  // { value: "NET_PROMOTER_SCORE", label: "Net Promoter Score®", icon: "‽" },
-  // { value: "SECTION", label: "Sección", icon: "🗐" },
+  { value: "RATING", label: "Ranting (0-5)", icon: "⇅" },
   { value: "TEXTAREA", label: "Texto largo", icon: "📄" },
   { value: "NUMBER", label: "Número", icon: "🔢" },
   { value: "EMAIL", label: "Email", icon: "📧" },
@@ -21,7 +15,7 @@ const questionTypeOptions = [
   { value: "URL", label: "URL", icon: "🔗" },
   { value: "TIME", label: "Hora", icon: "⏰" },
   { value: "DROPDOWN", label: "Lista desplegable", icon: "⬇️" },
-  { value: "SCALE", label: "Escala (1-10)", icon: "📊" },
+  { value: "SCALE", label: "Escala (0-10)", icon: "📊" },
   { value: "CHECKBOXES", label: "Múltiples opciones", icon: "☑️" },
 ]
 
@@ -153,6 +147,10 @@ export default function QuestionItemEditor({
   onSelectQuestion,
   isSelected,
 }: QuestionItemEditorProps) {
+  // LIFTED STATE HOOKS: Declare state here, unconditionally at the top level
+  const [displayRating, setDisplayRating] = useState(3)
+  const [npsDisplayScore, setNpsDisplayScore] = useState<number | null>(null)
+  const [scaleDisplayValue, setScaleDisplayValue] = useState(5)
 
   const handleUpdate = useCallback(
     (field: keyof QuestionData, value: any) => {
@@ -247,7 +245,7 @@ export default function QuestionItemEditor({
           </div>
         )
       case "RATING":
-        const [displayRating, setDisplayRating] = useState(3)
+        // Now using the lifted state
         return (
           <div>
             {renderEditableField("title", "Título de la pregunta", false, true)}
@@ -271,24 +269,6 @@ export default function QuestionItemEditor({
             {renderEditableField("title", "Título de la pregunta", false, true)}
             {renderEditableField("description", "Descripción (opcional)", true)}
             <input type="date" disabled className={`${baseClasses} ${inputDisabledClasses}`} />
-          </div>
-        )
-      case "RANKING":
-        return (
-          <div className="space-y-3">
-            {renderEditableField("title", "Título de la pregunta", false, true)}
-            {renderEditableField("description", "Descripción (opcional)", true)}
-            <div className="bg-white p-3 border border-gray-200 rounded-md shadow-sm">
-              <div className="flex items-center gap-3 mb-2 text-gray-700 text-base">
-                <span className="p-1.5 border rounded bg-gray-100 font-bold text-sm">1</span> Opción de Ranking A
-              </div>
-              <div className="flex items-center gap-3 mb-2 text-gray-700 text-base">
-                <span className="p-1.5 border rounded bg-gray-100 font-bold text-sm">2</span> Opción de Ranking B
-              </div>
-              <div className="flex items-center gap-3 text-gray-700 text-base">
-                <span className="p-1.5 border rounded bg-gray-100 font-bold text-sm">3</span> Opción de Ranking C
-              </div>
-            </div>
           </div>
         )
       case "LIKERT":
@@ -367,7 +347,7 @@ export default function QuestionItemEditor({
           </div>
         )
       case "NET_PROMOTER_SCORE":
-        const [npsDisplayScore, setNpsDisplayScore] = useState<number | null>(null)
+        // Now using the lifted state
         return (
           <div>
             {renderEditableField("title", "Título de la pregunta", false, true)}
@@ -531,7 +511,7 @@ export default function QuestionItemEditor({
           </div>
         )
       case "SCALE":
-        const [scaleDisplayValue, setScaleDisplayValue] = useState(5)
+        // Now using the lifted state
         return (
           <div>
             {renderEditableField("title", "Título de la pregunta", false, true)}
@@ -540,7 +520,7 @@ export default function QuestionItemEditor({
               <span className="text-base text-gray-700">1</span>
               <input
                 type="range"
-                min="1"
+                min="0"
                 max="10"
                 value={scaleDisplayValue}
                 onChange={(e) => setScaleDisplayValue(parseInt(e.target.value))}
@@ -587,7 +567,21 @@ export default function QuestionItemEditor({
           <p className="text-base text-gray-500 italic">No hay vista previa disponible para este tipo de pregunta.</p>
         )
     }
-  }, [question.type, question.options, question.id, question.title, question.description, question.required, handleUpdate, handleUpdateOption, handleAddOption, handleRemoveOption])
+  }, [
+    question.type,
+    question.options,
+    question.id,
+    question.title,
+    question.description,
+    handleUpdate,
+    handleUpdateOption,
+    handleAddOption,
+    handleRemoveOption,
+    // Add the state variables that are now used in renderPreviewWithInlineEdit
+    displayRating,
+    npsDisplayScore,
+    scaleDisplayValue
+  ])
 
 
   return (
@@ -668,7 +662,7 @@ export default function QuestionItemEditor({
                     {isRemovable && (
                       <button
                         type="button"
-                        onClick={() => onRemove(index, question.id)}
+                        onClick={(e) => { e.stopPropagation(); onRemove(index, question.id); }}
                         className="text-red-500 hover:text-red-700 text-xs flex items-center gap-1"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
