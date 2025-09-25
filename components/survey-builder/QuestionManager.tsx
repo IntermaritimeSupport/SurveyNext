@@ -4,6 +4,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import QuestionItemEditor from "./QuestionItemEditor";
 import type { QuestionData } from "./survey-manager"; // Using 'type' for type imports is a good practice
+import { useRouter } from "next/navigation";
+
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -14,8 +16,49 @@ interface QuestionManagerProps {
 export default function QuestionManager({ surveyId }: QuestionManagerProps) {
   const [questions, setQuestions] = useState<QuestionData[]>([]);
   const [questionsLoading, setQuestionsLoading] = useState(true);
-  // 1. Add state to keep track of the currently selected question's index
+  const router = useRouter();
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(null);
+  const [hasMissingRequiredTitles, setHasMissingRequiredTitles] = useState(false);
+  const [generalValidationErrors, setGeneralValidationErrors] = useState<string[]>([]);
+  const validateQuestions = useCallback((currentQuestions: QuestionData[]) => {
+    const errors: string[] = [];
+    let missingRequiredFrontendTitles = false;
+
+    currentQuestions.forEach((q, index) => {
+      // 1. Validar el título de preguntas obligatorias (frontend)
+      if (q.required && q.type !== "SECTION" && (!q.title || q.title.trim() === "")) {
+        missingRequiredFrontendTitles = true;
+      }
+
+      // 2. Validar que el tipo de pregunta esté seleccionado (backend podría requerirlo siempre)
+      if (!q.type || q.type.trim() === "") {
+        errors.push(`La pregunta ${index + 1} no tiene un tipo seleccionado.`);
+      }
+
+      // 3. Validar que el título tenga contenido (backend podría requerirlo siempre, incluso si no es 'required' por el frontend)
+      // Excepto para secciones, si tu backend las trata diferente
+      if (q.type !== "SECTION" && (!q.title || q.title.trim() === "")) {
+         errors.push(`La pregunta ${index + 1} requiere un título.`);
+      }
+      // Para secciones, si tu backend requiere un título (que no sea para guardar)
+      if (q.type === "SECTION" && (!q.title || q.title.trim() === "")) {
+         // Puedes decidir si una sección con título vacío es un error aquí o no
+         // Por ahora, lo dejaré solo para preguntas normales, ya que el mensaje de error de la imagen
+         // apunta más a `title` general y `type`.
+      }
+
+
+      // 4. Validar que el orden exista y sea un número (backend lo requiere)
+      if (q.order === undefined || q.order === null) {
+        errors.push(`La pregunta ${index + 1} no tiene un orden definido.`);
+      }
+    });
+
+    setHasMissingRequiredTitles(missingRequiredFrontendTitles);
+    setGeneralValidationErrors(errors);
+
+    return errors.length === 0 && !missingRequiredFrontendTitles; // Retorna true si todo es válido
+  }, []);
 
   useEffect(() => {
     async function fetchQuestions() {
@@ -56,6 +99,14 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
       alert("Error: ID de encuesta no disponible para guardar preguntas.");
       return;
     }
+    if (!validateQuestions(questions)) {
+      if (hasMissingRequiredTitles) {
+        alert("Por favor, completa los títulos de todas las preguntas marcadas como obligatorias.");
+      } else if (generalValidationErrors.length > 0) {
+        alert("Por favor, corrige los siguientes errores antes de guardar:\n" + generalValidationErrors.join("\n"));
+      }
+      return;
+    }
 
     setQuestionsLoading(true);
 
@@ -72,11 +123,12 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
       if (response.ok) {
         const updatedQuestions: QuestionData[] = await response.json();
         const processedUpdatedQuestions = updatedQuestions.map(q => ({ ...q, type: q.type || "TEXT" }));
-        setQuestions(processedUpdatedQuestions.sort((a, b) => (a.order || 0) - (b.order || 0)));
-        alert("Preguntas guardadas exitosamente.");
-        // After saving, you might want to clear the selection or re-select the first one.
-        // For now, let's clear it.
+        const sortedUpdatedQuestions = processedUpdatedQuestions.sort((a, b) => (a.order || 0) - (b.order || 0));
+        setQuestions(sortedUpdatedQuestions);
         setSelectedQuestionIndex(null);
+        validateQuestions(sortedUpdatedQuestions);
+        alert("Preguntas guardadas exitosamente.");
+        window.location.reload();
       } else {
         const error = await response.json();
         alert(error.message || "Error al guardar las preguntas.");
@@ -96,20 +148,18 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
         id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         title: "",
         description: "",
-        type: "", // <-- string vacío en vez de null, como lo tienes
+        type: "",
         required: false,
         order: newOrder,
         options: null,
         validation: null,
       };
-      // When adding a new question, automatically select it
-      setSelectedQuestionIndex(prev.length); // Select the last (newly added) question
-      return [
-        ...prev,
-        newQuestion,
-      ];
+      const updatedQuestions = [...prev, newQuestion];
+      setSelectedQuestionIndex(updatedQuestions.length - 1); // Seleccionar la última (recién añadida) pregunta
+      validateQuestions(updatedQuestions); // Validar al añadir
+      return updatedQuestions;
     });
-  }, []);
+  }, [validateQuestions]);
 
   const removeQuestion = useCallback(async (index: number, questionId?: string) => {
     if (questionId && !questionId.startsWith("new-")) {
@@ -123,12 +173,12 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
           alert("Pregunta eliminada exitosamente.");
           setQuestions((prev) => {
             const updatedQuestions = prev.filter((q) => q.id !== questionId).map((q, i) => ({ ...q, order: i + 1 }));
-            // If the removed question was selected, clear selection or select another
             if (selectedQuestionIndex === index) {
               setSelectedQuestionIndex(null);
             } else if (selectedQuestionIndex !== null && selectedQuestionIndex > index) {
-              setSelectedQuestionIndex(selectedQuestionIndex - 1); // Adjust index if a previous one was removed
+              setSelectedQuestionIndex(selectedQuestionIndex - 1);
             }
+            validateQuestions(updatedQuestions); // Validar al eliminar
             return updatedQuestions;
           });
         } catch (error) {
@@ -139,16 +189,16 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
     } else {
       setQuestions((prev) => {
         const updatedQuestions = prev.filter((_, i) => i !== index).map((q, i) => ({ ...q, order: i + 1 }));
-        // If the removed question was selected, clear selection or select another
         if (selectedQuestionIndex === index) {
             setSelectedQuestionIndex(null);
         } else if (selectedQuestionIndex !== null && selectedQuestionIndex > index) {
-            setSelectedQuestionIndex(selectedQuestionIndex - 1); // Adjust index if a previous one was removed
+            setSelectedQuestionIndex(selectedQuestionIndex - 1);
         }
+        validateQuestions(updatedQuestions); // Validar al eliminar
         return updatedQuestions;
       });
     }
-  }, [selectedQuestionIndex]); // Add selectedQuestionIndex to dependencies
+  }, [selectedQuestionIndex, validateQuestions]);
 
 
   const updateQuestion = useCallback(
@@ -159,18 +209,15 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
             ? {
                 ...q,
                 [field]: value,
-                // Logic for resetting options if question type changes
                 ...(field === "type" &&
                   !["MULTIPLE_CHOICE", "CHECKBOXES", "DROPDOWN"].includes(value as string) && {
                     options: null,
                   }),
                 ...(field === "type" &&
                   ["MULTIPLE_CHOICE", "CHECKBOXES", "DROPDOWN"].includes(value as string) &&
-                  // Only initialize options if they are null or empty
                   (q.options === null || q.options.length === 0) && {
                     options: [{ label: "", value: "" }],
                   }),
-                // Logic for resetting validation if question type changes
                 ...(field === "type" &&
                   !["TEXT", "TEXTAREA", "NUMBER", "EMAIL", "PHONE", "URL", "DATE", "TIME", "RANKING", "LIKERT", "FILE_UPLOAD", "NET_PROMOTER_SCORE", "SECTION"].includes(
                     value as string
@@ -185,10 +232,11 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
             .map((q, i) => ({ ...q, order: i + 1 }));
         }
 
+        validateQuestions(updated); // Validar al actualizar
         return updated;
       });
     },
-    []
+    [validateQuestions] // Añade validateQuestions a las dependencias
   );
 
   // 2. Define the handler for selecting a question
@@ -197,9 +245,7 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
   }, []);
 
 
-  if (questionsLoading) {
-    return <div className="text-center py-8 text-gray-600">Cargando preguntas...</div>;
-  }
+  const isSaveButtonDisabled = questionsLoading || hasMissingRequiredTitles || generalValidationErrors.length > 0;
 
   return (
     <form onSubmit={handleQuestionsSubmit} className="space-y-6">
@@ -207,6 +253,22 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
         <p className="text-gray-600 text-center py-4">
           Aún no hay preguntas para esta encuesta. ¡Añade la primera!
         </p>
+      )}
+      {hasMissingRequiredTitles && (
+        <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
+          ⚠️ Por favor, completa los títulos de todas las preguntas marcadas como obligatorias para poder guardar.
+        </div>
+      )}
+      {generalValidationErrors.length > 0 && (
+        <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
+          <p className="font-semibold mb-1">Se encontraron los siguientes problemas:</p>
+          <ul className="list-disc pl-5">
+            {generalValidationErrors.map((error, idx) => (
+              <li key={idx}>{error}</li>
+            ))}
+          </ul>
+          <p className="mt-2">Por favor, corrige estos errores para poder guardar las preguntas.</p>
+        </div>
       )}
 
       {questions.map((question, index) => (
@@ -217,9 +279,10 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
           onUpdate={updateQuestion}
           onRemove={removeQuestion}
           isRemovable={questions.length > 0}
-          // 3. Pass the new props
           onSelectQuestion={handleSelectQuestion}
           isSelected={index === selectedQuestionIndex}
+          // Pasa el estado de validación al QuestionItemEditor
+          isTitleMissingAndRequired={question.required && question.type !== "SECTION" && (!question.title || question.title.trim() === "")}
         />
       ))}
 
@@ -234,8 +297,9 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
       <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
         <button
           type="submit"
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          disabled={questionsLoading}
+          className={`px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500
+                      ${isSaveButtonDisabled ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
+          disabled={isSaveButtonDisabled}
         >
           Guardar Preguntas
         </button>

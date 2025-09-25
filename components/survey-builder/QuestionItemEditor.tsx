@@ -7,7 +7,7 @@ const questionTypeOptions = [
   { value: "MULTIPLE_CHOICE", label: "Opción", icon: "●" },
   { value: "TEXT", label: "Texto", icon: "T" },
   { value: "DATE", label: "Fecha", icon: "📅" },
-  { value: "RATING", label: "Ranting (0-5)", icon: "⇅" },
+  { value: "RATING", label: "Rating (0-5)", icon: "⇅" },
   { value: "TEXTAREA", label: "Texto largo", icon: "📄" },
   { value: "NUMBER", label: "Número", icon: "🔢" },
   { value: "EMAIL", label: "Email", icon: "📧" },
@@ -27,6 +27,7 @@ interface EditableTextProps {
   multiline?: boolean
   readOnly?: boolean // Para controlar si es solo de lectura (vista previa)
   isTitle?: boolean // Para aplicar estilos específicos de título en la vista previa
+  hasError?: boolean
 }
 
 const EditableText: React.FC<EditableTextProps> = ({
@@ -37,6 +38,7 @@ const EditableText: React.FC<EditableTextProps> = ({
   multiline = false,
   readOnly = false,
   isTitle = false,
+  hasError = false,
 }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [tempValue, setTempValue] = useState(value)
@@ -83,6 +85,8 @@ const EditableText: React.FC<EditableTextProps> = ({
     }
   }
 
+  const inputClasses = `${className} ${hasError ? 'border-red-500 ring-1 ring-red-500' : 'border-blue-500 ring-1 ring-blue-500'}`;
+
   if (isEditing) {
     return multiline ? (
       <textarea
@@ -113,7 +117,8 @@ const EditableText: React.FC<EditableTextProps> = ({
   return (
     <div
       onDoubleClick={handleDoubleClick}
-      className={`${className} ${readOnly ? "cursor-default" : "cursor-pointer hover:bg-blue-50 hover:border-blue-300"} transition-colors relative group flex items-center justify-between`}
+      className={`${className} ${readOnly ? "cursor-default" : "cursor-pointer hover:bg-blue-50 hover:border-blue-300"} transition-colors relative group flex items-center justify-between
+                  ${hasError ? 'border-red-400 bg-red-50' : ''}`}
       title={readOnly ? "" : "Doble click para editar"}
     >
       <span className={`${!value && "text-gray-400 italic"} ${isTitle ? "font-medium text-lg" : ""}`}>
@@ -123,6 +128,10 @@ const EditableText: React.FC<EditableTextProps> = ({
         <span className="absolute top-0 right-0 -mr-2 opacity-0 group-hover:opacity-100 text-xs text-blue-500 bg-white px-1 rounded shadow-sm transition-opacity">
           ✏️
         </span>
+      )}
+      {/* Mensaje de error para títulos requeridos */}
+      {isTitle && hasError && (
+        <p className="absolute -bottom-6 left-0 text-red-600 text-xs mt-1">Este título es obligatorio.</p>
       )}
     </div>
   )
@@ -136,6 +145,7 @@ interface QuestionItemEditorProps {
   isRemovable: boolean
   onSelectQuestion: (index: number) => void // Para seleccionar la pregunta y mostrar sus controles globales
   isSelected: boolean // Si la pregunta está actualmente seleccionada (editando sus propiedades globales)
+  isTitleMissingAndRequired: boolean;
 }
 
 export default function QuestionItemEditor({
@@ -146,6 +156,7 @@ export default function QuestionItemEditor({
   isRemovable,
   onSelectQuestion,
   isSelected,
+  isTitleMissingAndRequired,
 }: QuestionItemEditorProps) {
   // LIFTED STATE HOOKS: Declare state here, unconditionally at the top level
   const [displayRating, setDisplayRating] = useState(3)
@@ -201,6 +212,7 @@ export default function QuestionItemEditor({
         className={`w-full ${isTitle ? 'mb-2 text-lg font-bold' : 'mb-2 text-sm text-gray-700'}`}
         multiline={multiline}
         isTitle={isTitle}
+         hasError={isTitle && isTitleMissingAndRequired && !question[field]?.toString()}
       />
     );
 
@@ -577,6 +589,7 @@ export default function QuestionItemEditor({
     handleUpdateOption,
     handleAddOption,
     handleRemoveOption,
+    isTitleMissingAndRequired,
     // Add the state variables that are now used in renderPreviewWithInlineEdit
     displayRating,
     npsDisplayScore,

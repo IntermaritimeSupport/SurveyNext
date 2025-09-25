@@ -701,7 +701,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                   {/* Ships Input */}
                   <div>
                     <Label htmlFor="ships" className="text-sm font-medium text-slate-700">
-                      Number of Ships
+                      Number of Ships with ICS
                       {isEmailRequired && <span className="text-red-500 ml-1">*</span>}
                     </Label>
                     <Input

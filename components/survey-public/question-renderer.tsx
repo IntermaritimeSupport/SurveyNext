@@ -92,6 +92,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
             placeholder="Your answer..."
             className={error ? "border-red-300" : ""}
             maxLength={question.validation?.maxLength}
+            required
           />
         )
 
