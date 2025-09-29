@@ -627,7 +627,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                   {/* Company Input */}
                   <div>
                     <Label htmlFor="company" className="text-sm font-medium text-slate-700">
-                      Company
+                      Company name as per DOC
                       {isEmailRequired && <span className="text-red-500 ml-1">*</span>}
                     </Label>
                     <Input
