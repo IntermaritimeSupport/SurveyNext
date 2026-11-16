@@ -1,6 +1,7 @@
 // src/app/api/client-info/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { withCors } from '@/lib/cors'
+import { requireUser, ADMIN_ROLES } from '@/lib/auth'
 
 // Preflight request (OPTIONS)
 export async function OPTIONS(req: NextRequest) {
@@ -19,6 +20,8 @@ interface ClientInfo {
 
 export async function GET(request: NextRequest) {
   const origin = request.headers.get('origin')
+  const auth = await requireUser(request, ADMIN_ROLES)
+  if (auth.error) return auth.error
   try {
     const ipAddress =
       request.headers.get('x-forwarded-for') ||

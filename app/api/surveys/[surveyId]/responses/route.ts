@@ -116,7 +116,7 @@ export async function POST(request: NextRequest, { params: resolvedParams }: Pro
     const xForwardedFor = request.headers.get('x-forwarded-for');
     const ipAddress = xForwardedFor
       ? xForwardedFor.split(',')[0].trim()
-      : request.headers.get('X-Real-IP') || request.headers.get('host') || 'Unknown';
+      : request.headers.get('x-real-ip') || null;
     const userAgent = request.headers.get('user-agent') || 'Unknown';
 
     const survey = await prisma.survey.findUnique({
@@ -149,6 +149,21 @@ export async function POST(request: NextRequest, { params: resolvedParams }: Pro
       );
     }
 
+    const now = new Date();
+    if ((survey.startDate && now < survey.startDate) || (survey.endDate && now > survey.endDate)) {
+      return NextResponse.json(
+        { message: 'Esta encuesta no está disponible en este momento.' },
+        { status: 403, headers: withCors(origin) }
+      );
+    }
+
+    if (!Array.isArray(answers)) {
+      return NextResponse.json(
+        { message: 'Formato de respuestas inválido.' },
+        { status: 400, headers: withCors(origin) }
+      );
+    }
+
     // Check for duplicate responses if not allowed
     if (!survey.allowMultipleResponses && clientUserId && !survey.isAnonymous) {
       const existingResponse = await prisma.surveyResponse.findFirst({
@@ -167,6 +182,18 @@ export async function POST(request: NextRequest, { params: resolvedParams }: Pro
       survey.questions.map(q => [q.id, { ...q, options: sanitizeOptions(q.options) }])
     );
     const answersToCreate: AnswerInput[] = [];
+
+    // Required questions must be answered even if the client omitted them entirely
+    if (isComplete) {
+      const answeredIds = new Set(answers.map(a => a.questionId));
+      const missing = survey.questions.find(q => q.required && !answeredIds.has(q.id));
+      if (missing) {
+        return NextResponse.json(
+          { message: `La pregunta '${missing.title}' es requerida y no fue respondida.` },
+          { status: 400, headers: withCors(origin) }
+        );
+      }
+    }
 
     // --- Answer Validation Loop ---
     for (const answer of answers) {

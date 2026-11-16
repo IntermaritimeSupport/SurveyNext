@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { withCors } from '@/lib/cors'
+import { SESSION_COOKIE } from '@/lib/session'
 
 // Preflight request (OPTIONS)
 export async function OPTIONS(req: NextRequest) {
@@ -16,7 +17,7 @@ export async function OPTIONS(req: NextRequest) {
 export async function POST(request: NextRequest) {
   const origin = request.headers.get('origin')
   try {
-    (await cookies()).delete('token');
+    (await cookies()).delete(SESSION_COOKIE);
     return NextResponse.json(
       { message: 'Sesión cerrada exitosamente' },
       { status: 200, headers: withCors(origin) }
