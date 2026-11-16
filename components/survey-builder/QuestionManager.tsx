@@ -4,10 +4,35 @@
 import React, { useState, useEffect, useCallback } from "react";
 import QuestionItemEditor from "./QuestionItemEditor";
 import type { QuestionData } from "./survey-manager"; // Using 'type' for type imports is a good practice
+import { CHOICE_TYPES, getMatrixOptions, newOptionValue } from "@/lib/forms/question-types";
 import { useRouter } from "next/navigation";
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+
+// Options / validation a question gets when its type is chosen or changed
+function defaultsForType(type: string, q: QuestionData): Pick<QuestionData, "options" | "validation"> {
+  if (CHOICE_TYPES.has(type)) {
+    const keep = Array.isArray(q.options) && q.options.length > 0
+    return {
+      options: keep ? q.options : [1, 2].map((n) => ({ label: `Opción ${n}`, value: newOptionValue() })),
+      validation: null,
+    }
+  }
+  if (type === "MATRIX") {
+    const opt = (label: string) => ({ label, value: newOptionValue() })
+    return {
+      options: {
+        rows: [opt("Afirmación 1"), opt("Afirmación 2")],
+        columns: ["Totalmente en desacuerdo", "En desacuerdo", "Neutral", "De acuerdo", "Totalmente de acuerdo"].map(opt),
+      },
+      validation: null,
+    }
+  }
+  return { options: null, validation: null }
+}
+
+const renumber = (list: QuestionData[]) => list.map((q, i) => ({ ...q, order: i + 1 }))
 
 interface QuestionManagerProps {
   surveyId: string;
@@ -48,6 +73,16 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
       }
 
 
+      // Opciones: las preguntas de elección necesitan al menos una opción con texto
+      if (CHOICE_TYPES.has(q.type) && !(Array.isArray(q.options) && q.options.some((o) => o.label?.trim()))) {
+        errors.push(`La pregunta ${index + 1} necesita al menos una opción con texto.`);
+      }
+      if (q.type === "MATRIX") {
+        const grid = getMatrixOptions(q);
+        if (grid.rows.length === 0 || grid.columns.length === 0) {
+          errors.push(`La matriz de la pregunta ${index + 1} necesita al menos una fila y una columna.`);
+        }
+      }
       // 4. Validar que el orden exista y sea un número (backend lo requiere)
       if (q.order === undefined || q.order === null) {
         errors.push(`La pregunta ${index + 1} no tiene un orden definido.`);
@@ -205,25 +240,11 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
     (index: number, field: keyof QuestionData, value: any) => {
       setQuestions((prev) => {
         let updated = prev.map((q, i) =>
-          i === index
-            ? {
-                ...q,
-                [field]: value,
-                ...(field === "type" &&
-                  !["MULTIPLE_CHOICE", "CHECKBOXES", "DROPDOWN"].includes(value as string) && {
-                    options: null,
-                  }),
-                ...(field === "type" &&
-                  ["MULTIPLE_CHOICE", "CHECKBOXES", "DROPDOWN"].includes(value as string) &&
-                  (q.options === null || q.options.length === 0) && {
-                    options: [{ label: "", value: "" }],
-                  }),
-                ...(field === "type" &&
-                  !["TEXT", "TEXTAREA", "NUMBER", "EMAIL", "PHONE", "URL", "DATE", "TIME", "RANKING", "LIKERT", "FILE_UPLOAD", "NET_PROMOTER_SCORE", "SECTION"].includes(
-                    value as string
-                  ) && { validation: null }),
-              }
-            : q
+          i !== index
+            ? q
+            : field === "type" && value !== q.type
+              ? { ...q, type: value, ...defaultsForType(value as string, q) }
+              : { ...q, [field]: value }
         );
 
         if (field === "order") {
@@ -238,6 +259,32 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
     },
     [validateQuestions] // Añade validateQuestions a las dependencias
   );
+
+  const duplicateQuestion = useCallback((index: number) => {
+    setQuestions((prev) => {
+      const src = prev[index];
+      const copy: QuestionData = {
+        ...JSON.parse(JSON.stringify(src)),
+        id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        title: src.title ? `${src.title} (copia)` : "",
+      };
+      const updated = renumber([...prev.slice(0, index + 1), copy, ...prev.slice(index + 1)]);
+      setSelectedQuestionIndex(index + 1);
+      validateQuestions(updated);
+      return updated;
+    });
+  }, [validateQuestions]);
+
+  const moveQuestion = useCallback((index: number, direction: -1 | 1) => {
+    setQuestions((prev) => {
+      const target = index + direction;
+      if (target < 0 || target >= prev.length) return prev;
+      const list = [...prev];
+      [list[index], list[target]] = [list[target], list[index]];
+      setSelectedQuestionIndex(target);
+      return renumber(list);
+    });
+  }, []);
 
   // 2. Define the handler for selecting a question
   const handleSelectQuestion = useCallback((index: number) => {
@@ -281,6 +328,10 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
           isRemovable={questions.length > 0}
           onSelectQuestion={handleSelectQuestion}
           isSelected={index === selectedQuestionIndex}
+          onDuplicate={duplicateQuestion}
+          onMove={moveQuestion}
+          isFirst={index === 0}
+          isLast={index === questions.length - 1}
           // Pasa el estado de validación al QuestionItemEditor
           isTitleMissingAndRequired={question.required && question.type !== "SECTION" && (!question.title || question.title.trim() === "")}
         />

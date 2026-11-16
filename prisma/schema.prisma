@@ -187,4 +187,6 @@ enum QuestionType {
   FILE_UPLOAD
   SIGNATURE
   RATING
+  NET_PROMOTER_SCORE
+  SECTION // título / salto de sección, no se responde
 }

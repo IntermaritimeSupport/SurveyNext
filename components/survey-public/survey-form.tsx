@@ -12,8 +12,9 @@ import { ProgressBar } from "./progress-bar"
 
 import { QuestionType as PrismaQuestionType, type SurveyStatus } from "@prisma/client"
 import { CheckCircle, ChevronLeft, ChevronRight, Loader2, Send } from "lucide-react"
-import type { QuestionOption } from "../survey-builder/survey-manager"
 import Imagenes from "@/lib/images"
+import { validateAnswer as validateSharedAnswer } from "@/lib/forms/validate"
+import { isAnswerable } from "@/lib/forms/question-types"
 
 interface PublicSurvey {
   id: string
@@ -35,7 +36,7 @@ interface PublicQuestion {
   type: PrismaQuestionType
   required: boolean
   order: number
-  options: QuestionOption[] | null
+  options: any
   validation: Record<string, any> | null
 }
 
@@ -90,209 +91,10 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
   const isLastQuestionPage = currentPageIndex === totalQuestionPages - 1
 
+  // Same rules the server applies (lib/forms/validate.ts)
   const validateAnswer = (question: PublicQuestion, answerValue: any): string | null => {
-    // Determine if the answer is effectively empty for validation purposes
-    const isAnswerEmpty =
-      answerValue === undefined ||
-      answerValue === null ||
-      (typeof answerValue === "string" && answerValue.trim() === "") ||
-      (Array.isArray(answerValue) && answerValue.length === 0) ||
-      (typeof answerValue === "object" && answerValue !== null && Object.keys(answerValue).length === 0 && question.type !== PrismaQuestionType.FILE_UPLOAD);
-      // For FILE_UPLOAD, an empty object could still be valid if it means "no file uploaded yet"
-      // but if the question is required, the `fileInfo` object must exist and contain at least fileName/fileUrl
-
-    if (question.required && isAnswerEmpty) {
-      return "This question is required."
-    }
-
-    // If not required and empty, it's valid.
-    if (!question.required && isAnswerEmpty) {
-      return null
-    }
-
-    // Now, apply specific validations only if an answer is provided (or if required and not empty)
-    switch (question.type) {
-      case PrismaQuestionType.EMAIL:
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        if (typeof answerValue === "string" && !emailRegex.test(answerValue)) {
-          return "Please enter a valid email."
-        }
-        break
-
-      case PrismaQuestionType.TEXT:
-      case PrismaQuestionType.TEXTAREA:
-        if (typeof answerValue === "string") {
-          if (question.validation?.minLength && answerValue.length < question.validation.minLength) {
-            return `Minimum ${question.validation.minLength} characters.`
-          }
-          if (question.validation?.maxLength && answerValue.length > question.validation.maxLength) {
-            return `Maximum ${question.validation.maxLength} characters.`
-          }
-        }
-        break
-
-      case PrismaQuestionType.NUMBER:
-        const numValue = Number(answerValue)
-        if (isNaN(numValue)) { // Handles null, undefined, non-numeric strings
-          return "Must be a valid number."
-        }
-        const minNum = question.validation?.min ?? -Infinity;
-        const maxNum = question.validation?.max ?? Infinity;
-        if (numValue < minNum) {
-          return `Minimum value is ${minNum}.`
-        }
-        if (numValue > maxNum) {
-          return `Maximum value is ${maxNum}.`
-        }
-        break
-
-      case PrismaQuestionType.URL:
-        // A more robust URL regex or URL constructor check
-        try {
-          if (typeof answerValue === "string" && answerValue.trim() !== "") {
-            new URL(answerValue)
-          }
-        } catch (e) {
-          return "Please enter a valid URL."
-        }
-        break
-
-      case PrismaQuestionType.PHONE:
-        // Simple phone regex, consider using a library for international numbers if needed
-        const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/im
-        if (typeof answerValue === "string" && !phoneRegex.test(answerValue)) {
-          return "Please enter a valid phone number."
-        }
-        break
-
-      case PrismaQuestionType.DATE:
-        if (typeof answerValue === "string") {
-          // Basic YYYY-MM-DD format check
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(answerValue)) {
-            return `Invalid date format (YYYY-MM-DD).`
-          }
-          const dateValue = new Date(answerValue)
-          if (isNaN(dateValue.getTime())) { // Check for valid date parse
-            return `Invalid date.`
-          }
-          const minDate = question.validation?.minDate ? new Date(question.validation.minDate) : null;
-          const maxDate = question.validation?.maxDate ? new Date(question.validation.maxDate) : null;
-
-          if (minDate && dateValue < minDate) {
-              return `Date cannot be before ${question?.validation?.minDate}.`;
-          }
-          if (maxDate && dateValue > maxDate) {
-              return `Date cannot be after ${question?.validation?.maxDate}.`;
-          }
-        }
-        break
-
-      case PrismaQuestionType.TIME:
-        if (typeof answerValue === "string") {
-          // Basic HH:mm format check
-          if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(answerValue)) {
-            return `Invalid time format (HH:mm).`
-          }
-          // Additional minTime/maxTime validation could be added if needed
-          const minTime = question.validation?.minTime; // e.g., "08:00"
-          const maxTime = question.validation?.maxTime; // e.g., "17:00"
-
-          if (minTime && answerValue < minTime) {
-            return `Time cannot be before ${minTime}.`;
-          }
-          if (maxTime && answerValue > maxTime) {
-            return `Time cannot be after ${maxTime}.`;
-          }
-        }
-        break
-
-      case PrismaQuestionType.MULTIPLE_CHOICE:
-      case PrismaQuestionType.DROPDOWN:
-        const dropdownOptions = (question.options as QuestionOption[] | null) || []
-        // Ensure the selected value is one of the valid options
-        if (!dropdownOptions.some((opt) => opt.value === answerValue)) {
-          return "The selected option is invalid."
-        }
-        break
-
-      case PrismaQuestionType.CHECKBOXES:
-        const checkboxOptions = (question.options as QuestionOption[] | null) || []
-        if (!Array.isArray(answerValue)) {
-          return "Must select one or more options."
-        }
-        const validCheckboxValues = checkboxOptions.map((opt) => opt.value)
-        if (!answerValue.every((val: any) => validCheckboxValues.includes(val))) {
-          return "One or more selected options are invalid."
-        }
-        // You could also add a minSelections / maxSelections validation here
-        if (question.validation?.minSelections && answerValue.length < question.validation.minSelections) {
-          return `Please select at least ${question.validation.minSelections} options.`;
-        }
-        if (question.validation?.maxSelections && answerValue.length > question.validation.maxSelections) {
-          return `Please select at most ${question.validation.maxSelections} options.`;
-        }
-        break
-
-      case PrismaQuestionType.RATING:
-        const ratingValue = Number(answerValue)
-        if (isNaN(ratingValue)) { // Handles null, undefined, non-numeric strings
-          return "Must be a valid number."
-        }
-        const minRatingVal = question.validation?.min ?? 0
-        const maxRatingVal = question.validation?.max ?? 5
-        if (ratingValue < minRatingVal || ratingValue > maxRatingVal) {
-          return `Must be between ${minRatingVal} and ${maxRatingVal}.`
-        }
-        break
-
-      case PrismaQuestionType.SCALE: // ✅ CORREGIDO: Usando variables locales correctas (minScaleVal, maxScaleVal)
-        const scaleValue = Number(answerValue)
-        if (isNaN(scaleValue)) { // Handles null, undefined, non-numeric strings
-          return "Must be a valid number."
-        }
-        const minScaleVal = question.validation?.min ?? 0
-        const maxScaleVal = question.validation?.max ?? 10
-        if (scaleValue < minScaleVal || scaleValue > maxScaleVal) {
-          return `Must be between ${minScaleVal} and ${maxScaleVal}.`
-        }
-        break
-
-      case PrismaQuestionType.FILE_UPLOAD:
-        if (typeof answerValue !== "object" || answerValue === null || !answerValue.fileName || !answerValue.fileUrl) {
-          return "Must attach a valid file."
-        }
-        // Additional file validations (size, type)
-        const maxFileSize = question.validation?.maxSize; // in bytes
-        const allowedTypes = question.validation?.allowedTypes as string[]; // array of mime types
-        if (maxFileSize && answerValue.fileSize && answerValue.fileSize > maxFileSize) {
-          return `File size exceeds the maximum of ${maxFileSize / (1024 * 1024)}MB.`;
-        }
-        if (allowedTypes && answerValue.fileType && !allowedTypes.includes(answerValue.fileType)) {
-          return `File type not allowed. Allowed types: ${allowedTypes.join(', ')}.`;
-        }
-        break
-
-      case PrismaQuestionType.SIGNATURE:
-        if (typeof answerValue !== "string" || answerValue.length < 10) { // Assuming a base64 string or similar
-          return "The signature is invalid or too short."
-        }
-        break
-
-      case PrismaQuestionType.MATRIX:
-        // Matrix validation can be complex and depends on its structure
-        if (
-          typeof answerValue !== "object" ||
-          answerValue === null ||
-          Array.isArray(answerValue) || // Assuming it's an object mapping row to column values
-          Object.keys(answerValue).length === 0
-        ) {
-          return "Invalid matrix response format."
-        }
-        // Further validation would depend on specific matrix design (e.g., all rows answered)
-        break
-    }
-
-    return null
+    const result = validateSharedAnswer(question, answerValue)
+    return result.ok ? null : result.error
   }
 
   const handleAnswerChange = useCallback((questionId: string, value: any) => {
@@ -415,7 +217,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
     setIsLoading(true)
     setSubmissionError(null)
 
-    const answersForApi: Answer[] = sortedQuestions.map((q) => ({
+    const answersForApi: Answer[] = sortedQuestions.filter((q) => isAnswerable(q.type)).map((q) => ({
       questionId: q.id,
       value: currentAnswers.has(q.id) ? (currentAnswers.get(q.id) ?? null) : null,
     }))
