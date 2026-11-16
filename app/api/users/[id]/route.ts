@@ -1,26 +1,9 @@
 // app/api/users/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient, Role, UserStatus } from '@prisma/client';
+import { Role, UserStatus } from '@prisma/client'
 import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
-
-const allowedOrigins = [
-  'http://localhost:3000',
-  'https://survey-next-git-main-intermaritime.vercel.app',
-  'https://surveys.intermaritime.org',
-];
-
-// Función auxiliar para CORS
-function withCors(origin: string | null) {
-  const isAllowed = origin && allowedOrigins.includes(origin);
-  return {
-    'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token',
-    'Access-Control-Allow-Credentials': 'true',
-  };
-}
+import prisma from '@/lib/prisma'
+import { withCors } from '@/lib/cors'
 
 // Preflight request (OPTIONS)
 export async function OPTIONS(req: NextRequest) {
@@ -166,7 +149,6 @@ export async function PUT(request: Request, { params: resolvedParams }: Props) {
       }
       dataToUpdate.status = newStatusString as UserStatus;
     }
-
 
     // 4. Ejecutar la actualización
     const updatedUser = await prisma.user.update({

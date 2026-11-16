@@ -7,14 +7,15 @@
     "node": "22.x"
   },
   "scripts": {
-    "build": "prisma generate --no-engine && next build && tsc",
+    "build": "prisma generate --no-engine && next build",
     "dev": "next dev --turbopack",
     "lint": "next lint",
     "start": "next start",
-    "seed": "node --loader ts-node/esm prisma/seed.ts"
+    "seed": "node --env-file=.env prisma/seed.ts",
+    "typecheck": "tsc --noEmit"
   },
   "prisma": {
-    "seed": "node --loader ts-node/esm prisma/seed.ts"
+    "seed": "node prisma/seed.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
