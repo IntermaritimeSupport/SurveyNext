@@ -1,6 +1,7 @@
 // app/api/surveys/[surveyId]/questions/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { QuestionType } from '@prisma/client'
+import { Prisma, QuestionType } from '@prisma/client'
+import { getLogic } from '@/lib/forms/logic'
 import prisma from '@/lib/prisma'
 import { withCors } from '@/lib/cors'
 
@@ -79,27 +80,47 @@ export async function POST(request: NextRequest, { params: resolvedParams }: Res
       await prisma.question.deleteMany({ where: { id: { in: questionsToDeleteIds } } });
     }
 
-    // Crear o actualizar preguntas
-    const transactionOps = clientQuestions.map(q => {
-      const data: any = {
-        title: q.title,
-        description: q.description || null,
-        type: q.type,
-        required: q.required || false,
-        order: q.order,
-        options: q.options || null,
-        validation: q.validation || null,
-        surveyId,
-      };
+    // Crear o actualizar preguntas. Las condiciones (logic) pueden apuntar a preguntas
+    // nuevas que todavía tienen un id temporal del editor ("new-..."), así que primero se
+    // guardan las preguntas y después se escribe la lógica con los ids reales.
+    await prisma.$transaction(async (tx) => {
+      const idMap = new Map<string, string>();
+      const savedByIndex: string[] = [];
+      for (const q of clientQuestions) {
+        const data: any = {
+          title: q.title,
+          description: q.description || null,
+          type: q.type,
+          required: q.required || false,
+          order: q.order,
+          options: q.options || null,
+          validation: q.validation || null,
+          surveyId,
+        };
+        const saved = q.id && existingDbQuestionIds.has(q.id)
+          ? await tx.question.update({ where: { id: q.id }, data })
+          : await tx.question.create({ data });
+        savedByIndex.push(saved.id);
+        if (q.id) idMap.set(q.id, saved.id);
+      }
 
-      if (q.id && existingDbQuestionIds.has(q.id)) {
-        return prisma.question.update({ where: { id: q.id }, data });
-      } else {
-        return prisma.question.create({ data });
+      const savedIds = new Set(savedByIndex);
+      for (const [i, q] of clientQuestions.entries()) {
+        const logic = getLogic(q);
+        const mapped = logic
+          ? {
+              match: logic.match,
+              showIf: logic.showIf
+                .map(c => ({ ...c, questionId: idMap.get(c.questionId) ?? c.questionId }))
+                .filter(c => savedIds.has(c.questionId)),
+            }
+          : null;
+        await tx.question.update({
+          where: { id: savedByIndex[i] },
+          data: { logic: mapped && mapped.showIf.length ? (mapped as unknown as Prisma.InputJsonValue) : Prisma.DbNull },
+        });
       }
     });
-
-    await prisma.$transaction(transactionOps);
 
     const updatedQuestions = await prisma.question.findMany({
       where: { surveyId },

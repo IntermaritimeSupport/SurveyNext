@@ -29,6 +29,7 @@ export interface QuestionData {
   order: number;
   options: QuestionOption[] | MatrixOptions | null; // MATRIX stores { rows, columns }
   validation?: Record<string, any> | null;
+  logic?: unknown; // conditional display rules (lib/forms/logic.ts)
 }
 
 export interface SurveyData {
