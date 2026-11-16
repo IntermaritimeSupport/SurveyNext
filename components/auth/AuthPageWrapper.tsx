@@ -19,10 +19,12 @@ export function AuthPageWrapper({ children }: AuthPageWrapperProps) {
     // Si no está cargando y está autenticado
     if (!isLoading && isAuthenticated) {
       // Redirige al dashboard o a la página de admin si es admin
-      if (user?.role === 'ADMIN') {
-        router.push('/admin');
+      if (user && ['SUPERADMIN', 'ADMIN', 'MODERATOR'].includes(user.role)) {
+        // Vuelve a la página de admin que pidió el middleware (?next=/admin/...), si existe
+        const next = new URLSearchParams(window.location.search).get('next');
+        router.push(next && next.startsWith('/admin') ? next : '/admin');
       } else {
-        router.push('/login'); // O la ruta por defecto para usuarios normales
+        router.push('/');
       }
     }
     // No redirijas si está cargando, ya que el estado de auth aún no es definitivo

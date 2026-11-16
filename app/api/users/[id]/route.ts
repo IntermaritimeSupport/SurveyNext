@@ -4,6 +4,7 @@ import { Role, UserStatus } from '@prisma/client'
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma'
 import { withCors } from '@/lib/cors'
+import { requireUser, ADMIN_ROLES } from '@/lib/auth'
 
 // Preflight request (OPTIONS)
 export async function OPTIONS(req: NextRequest) {
@@ -21,6 +22,8 @@ interface Props {
 // GET /api/users/[id] - Obtener un usuario por ID
 export async function GET(request: Request, { params: resolvedParams }: Props) {
   const origin = request.headers.get('origin')
+  const auth = await requireUser(request, ADMIN_ROLES)
+  if (auth.error) return auth.error
   const { id } = await resolvedParams;
   try {
     const user = await prisma.user.findUnique({
@@ -67,6 +70,8 @@ export async function GET(request: Request, { params: resolvedParams }: Props) {
 // PUT /api/users/[id] - Actualizar un usuario por ID
 export async function PUT(request: Request, { params: resolvedParams }: Props) {
   const origin = request.headers.get('origin')
+  const auth = await requireUser(request, ADMIN_ROLES)
+  if (auth.error) return auth.error
   const { id } = await resolvedParams;
 
   const body = await request.json();
@@ -74,16 +79,7 @@ export async function PUT(request: Request, { params: resolvedParams }: Props) {
   // console.log(body)
 
   // --- 1. Autenticación y Autorización del Solicitante ---
-  const requestingUserRoleHeader = request.headers.get('x-requester-role');
-  let requestingUserRole: Role;
-
-  if (!requestingUserRoleHeader) {
-    return NextResponse.json({ message: 'No autorizado: Rol del solicitante no proporcionado.' }, { status: 401, headers: withCors(origin) });
-  }
-  if (!Object.values(Role).includes(requestingUserRoleHeader as Role)) {
-    return NextResponse.json({ message: 'No autorizado: Rol del solicitante inválido.' }, { status: 401, headers: withCors(origin) });
-  }
-  requestingUserRole = requestingUserRoleHeader as Role;
+  const requestingUserRole: Role = auth.user.role as Role;
 
   // Si el usuario no es SUPERADMIN ni ADMIN, no puede hacer PUT
   if (requestingUserRole !== Role.SUPERADMIN && requestingUserRole !== Role.ADMIN) {
@@ -179,17 +175,10 @@ export async function PUT(request: Request, { params: resolvedParams }: Props) {
 // DELETE /api/users/[id] - Eliminar un usuario por ID
 export async function DELETE(request: Request, { params: resolvedParams }: Props) {
   const origin = request.headers.get('origin');
+  const auth = await requireUser(request, ADMIN_ROLES)
+  if (auth.error) return auth.error
   const { id } = await resolvedParams;
-  const requestingUserRoleHeader = request.headers.get('x-requester-role');
-  let requestingUserRole: Role;
-
-  if (!requestingUserRoleHeader) {
-    return NextResponse.json({ message: 'No autorizado: Rol del solicitante no proporcionado.' }, { status: 401, headers: withCors(origin) });
-  }
-  if (!Object.values(Role).includes(requestingUserRoleHeader as Role)) {
-    return NextResponse.json({ message: 'No autorizado: Rol del solicitante inválido.' }, { status: 401, headers: withCors(origin) });
-  }
-  requestingUserRole = requestingUserRoleHeader as Role;
+  const requestingUserRole: Role = auth.user.role as Role;
 
   // Si el usuario no es SUPERADMIN ni ADMIN, no puede hacer DELETE
   if (requestingUserRole !== Role.SUPERADMIN && requestingUserRole !== Role.ADMIN) {

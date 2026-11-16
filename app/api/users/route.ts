@@ -4,6 +4,7 @@ import { Role } from '@prisma/client'
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma'
 import { withCors } from '@/lib/cors'
+import { requireUser, ADMIN_ROLES } from '@/lib/auth'
 
 // Preflight request (OPTIONS)
 export async function OPTIONS(req: NextRequest) {
@@ -16,6 +17,8 @@ export async function OPTIONS(req: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const origin = request.headers.get('origin')
+  const auth = await requireUser(request, ADMIN_ROLES)
+  if (auth.error) return auth.error
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -39,22 +42,13 @@ export async function GET(request: NextRequest) {
 // POST /api/users - Crear un nuevo usuario
 export async function POST(request: NextRequest) {
   const origin = request.headers.get('origin');
+  const auth = await requireUser(request, ADMIN_ROLES)
+  if (auth.error) return auth.error
   try {
     const body = await request.json();
     const { email, name, password, role: newUserRoleString } = body; // 'newUserRoleString' es el rol que se intenta asignar al nuevo usuario
 
-    const requestingUserRoleHeader = request.headers.get('x-requester-role');
-    let requestingUserRole: Role;
-
-    if (!requestingUserRoleHeader) {
-      return NextResponse.json({ message: 'No autorizado: Rol del solicitante no proporcionado.' }, { status: 401, headers: withCors(origin) });
-    }
-
-    // Validar que el rol del solicitante sea un valor válido del enum Role
-    if (!Object.values(Role).includes(requestingUserRoleHeader as Role)) {
-      return NextResponse.json({ message: 'No autorizado: Rol del solicitante inválido.' }, { status: 401, headers: withCors(origin) });
-    }
-    requestingUserRole = requestingUserRoleHeader as Role;
+    const requestingUserRole: Role = auth.user.role as Role;
     // --- Fin de Autenticación y Autorización del Solicitante ---
 
     // 2. Validación básica de campos obligatorios para el nuevo usuario

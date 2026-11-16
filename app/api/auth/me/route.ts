@@ -1,9 +1,9 @@
 // app/api/auth/me/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import jwt from 'jsonwebtoken';
 import prisma from '@/lib/prisma'
 import { withCors } from '@/lib/cors'
+import { SESSION_COOKIE, verifySession } from '@/lib/session'
 
 // Preflight request (OPTIONS)
 export async function OPTIONS(req: NextRequest) {
@@ -14,40 +14,14 @@ export async function OPTIONS(req: NextRequest) {
   })
 }
 
-// Define la interfaz para el payload del JWT
-interface JwtPayload {
-  userId: string;
-  email: string;
-  role: string;
-  iat: number;
-  exp: number;
-}
-
 // GET /api/auth/me - Obtener información del usuario autenticado
 export async function GET(request: NextRequest) {
   const origin = request.headers.get('origin')
   try {
-    const token = (await cookies()).get('token')?.value;
-
-    if (!token) {
+    const decodedToken = await verifySession((await cookies()).get(SESSION_COOKIE)?.value);
+    if (!decodedToken) {
       return NextResponse.json(
         { message: 'No autenticado' },
-        { status: 401, headers: withCors(origin) }
-      )
-    }
-
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-      throw new Error('JWT_SECRET no está definido en las variables de entorno.');
-    }
-
-    let decodedToken: JwtPayload;
-    try {
-      decodedToken = jwt.verify(token, jwtSecret) as JwtPayload;
-    } catch (jwtError) {
-      console.error('Error al verificar el token JWT:', jwtError);
-      return NextResponse.json(
-        { message: 'Token inválido o expirado' },
         { status: 401, headers: withCors(origin) }
       )
     }

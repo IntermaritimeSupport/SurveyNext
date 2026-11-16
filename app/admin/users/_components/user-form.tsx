@@ -105,7 +105,6 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel, myRole }: UserF
       let response;
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
-        'x-requester-role': myRole || "USER",
       };
 
       if (isEditing) {
@@ -157,7 +156,7 @@ export function UserForm({ initialUser, onSaveSuccess, onCancel, myRole }: UserF
     setIsLoading(true);
 
     try {
-      const headers: HeadersInit = { 'x-requester-role': myRole || "USER" };
+      const headers: HeadersInit = {};
       const response = await fetch(`${API_BASE_URL}/api/users/${initialUser.id}`, {
         method: 'DELETE',
         headers,
