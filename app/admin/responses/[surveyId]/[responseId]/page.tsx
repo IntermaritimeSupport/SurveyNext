@@ -22,6 +22,7 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { QuestionType as PrismaQuestionType } from "@prisma/client"
 import { getParticipant } from "@/lib/responses/participant"
+import { formatAnswer, getMatrixOptions } from "@/lib/forms/question-types"
 
 // ------------------ Tipos ------------------
 interface APIQuestion {
@@ -93,7 +94,7 @@ function renderAnswerValue(answer: APIAnswer) {
     case PrismaQuestionType.DROPDOWN: {
       return (
         <span className="px-3 py-1 border rounded-md bg-slate-50 text-slate-700 text-base">
-          {String(value)}
+          {formatAnswer(answer.question, value)}
         </span>
       )
     }
@@ -171,6 +172,21 @@ function renderAnswerValue(answer: APIAnswer) {
         )
       }
       return <span className="text-slate-400">Archivo subido</span>
+
+    case PrismaQuestionType.MATRIX: {
+      const { rows, columns } = getMatrixOptions(answer.question)
+      const cells = value && typeof value === "object" ? (value as Record<string, string>) : {}
+      return (
+        <ul className="text-base text-slate-700 space-y-0.5">
+          {rows.map((r) => (
+            <li key={r.value}>
+              <span className="text-slate-500">{r.label}:</span>{" "}
+              {columns.find((c) => c.value === cells[r.value])?.label ?? <span className="text-slate-400">—</span>}
+            </li>
+          ))}
+        </ul>
+      )
+    }
 
     case PrismaQuestionType.SIGNATURE:
       if (typeof value === "string" && (value.startsWith("http") || value.startsWith("data:image"))) {

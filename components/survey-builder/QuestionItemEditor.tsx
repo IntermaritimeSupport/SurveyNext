@@ -2,22 +2,11 @@
 
 import { useCallback, useState, useRef, useEffect } from "react"
 import type { QuestionData, QuestionOption } from "./survey-manager"
+import QuestionSettings, { hasSettings } from "./QuestionSettings"
+import { QUESTION_TYPES, getMatrixOptions, getRange, newOptionValue, type ChoiceOption } from "@/lib/forms/question-types"
 
-const questionTypeOptions = [
-  { value: "MULTIPLE_CHOICE", label: "Opción", icon: "●" },
-  { value: "TEXT", label: "Texto", icon: "T" },
-  { value: "DATE", label: "Fecha", icon: "📅" },
-  { value: "RATING", label: "Rating (0-5)", icon: "⇅" },
-  { value: "TEXTAREA", label: "Texto largo", icon: "📄" },
-  { value: "NUMBER", label: "Número", icon: "🔢" },
-  { value: "EMAIL", label: "Email", icon: "📧" },
-  { value: "PHONE", label: "Teléfono", icon: "📞" },
-  { value: "URL", label: "URL", icon: "🔗" },
-  { value: "TIME", label: "Hora", icon: "⏰" },
-  { value: "DROPDOWN", label: "Lista desplegable", icon: "⬇️" },
-  { value: "SCALE", label: "Escala (0-10)", icon: "📊" },
-  { value: "CHECKBOXES", label: "Múltiples opciones", icon: "☑️" },
-]
+// Types offered in the builder (FILE_UPLOAD / SIGNATURE stay hidden until implemented)
+const questionTypeOptions = QUESTION_TYPES.filter((t) => !t.hidden)
 
 interface EditableTextProps {
   value: string
@@ -144,6 +133,10 @@ interface QuestionItemEditorProps {
   onRemove: (index: number, questionId?: string) => void
   isRemovable: boolean
   onSelectQuestion: (index: number) => void // Para seleccionar la pregunta y mostrar sus controles globales
+  onDuplicate: (index: number) => void
+  onMove: (index: number, direction: -1 | 1) => void
+  isFirst: boolean
+  isLast: boolean
   isSelected: boolean // Si la pregunta está actualmente seleccionada (editando sus propiedades globales)
   isTitleMissingAndRequired: boolean;
 }
@@ -157,11 +150,12 @@ export default function QuestionItemEditor({
   onSelectQuestion,
   isSelected,
   isTitleMissingAndRequired,
+  onDuplicate,
+  onMove,
+  isFirst,
+  isLast,
 }: QuestionItemEditorProps) {
-  // LIFTED STATE HOOKS: Declare state here, unconditionally at the top level
-  const [displayRating, setDisplayRating] = useState(3)
   const [npsDisplayScore, setNpsDisplayScore] = useState<number | null>(null)
-  const [scaleDisplayValue, setScaleDisplayValue] = useState(5)
 
   const handleUpdate = useCallback(
     (field: keyof QuestionData, value: any) => {
@@ -170,38 +164,61 @@ export default function QuestionItemEditor({
     [index, onUpdate],
   )
 
+  const options: QuestionOption[] = Array.isArray(question.options) ? question.options : []
+
   const handleUpdateOption = useCallback(
-    (optIndex: number, labelValue: string) => {
-      const updatedOptions: QuestionOption[] = question.options
-        ? question.options.map((opt, oI) =>
-            oI === optIndex ? { ...opt, label: labelValue, value: labelValue } : opt
-          )
-        : []; // If options are null/undefined, start with an empty array
-      handleUpdate("options", updatedOptions);
+    (optIndex: number, label: string) => {
+      handleUpdate("options", options.map((opt, i) => (i === optIndex ? { ...opt, label, value: opt.value || newOptionValue() } : opt)))
     },
-    [question.options, handleUpdate]
+    [options, handleUpdate]
   );
 
   const handleAddOption = useCallback(() => {
-    const newOption: QuestionOption = { label: "", value: "" }; // Ensure new option has both label and value
-    const updatedOptions: QuestionOption[] = question.options
-      ? [...(question.options || []), newOption]
-      : [newOption];
-    handleUpdate("options", updatedOptions);
-  }, [question.options, handleUpdate]);
+    handleUpdate("options", [...options, { label: `Opción ${options.length + 1}`, value: newOptionValue() }]);
+  }, [options, handleUpdate]);
+
+  const updateMatrix = useCallback(
+    (kind: "rows" | "columns", items: ChoiceOption[]) => {
+      handleUpdate("options", { ...getMatrixOptions(question), [kind]: items })
+    },
+    [question, handleUpdate]
+  )
 
   const handleRemoveOption = useCallback(
     (optIndex: number) => {
-      const updatedOptions = question.options ? question.options.filter((_, oI) => oI !== optIndex) : null
-      handleUpdate("options", updatedOptions)
+      handleUpdate("options", options.filter((_, i) => i !== optIndex))
     },
-    [question.options, handleUpdate],
+    [options, handleUpdate],
   )
 
   // --- Renderizado del PREVIEW de los campos (con editable por doble click en texto) ---
   const renderPreviewWithInlineEdit = useCallback(() => {
     const baseClasses = "w-full px-3 py-2 border border-gray-300 rounded-md text-base text-gray-800 bg-white"
     const inputDisabledClasses = "pointer-events-none opacity-80" // Para que se vea inactivo pero no interfiere con EditableText
+
+    const choiceOptions: QuestionOption[] = Array.isArray(question.options) ? question.options : []
+    const renderChoiceList = (kind: "radio" | "checkbox" | "select") => (
+      <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+        {choiceOptions.map((option, idx) => (
+          <div key={option.value || idx} className="flex items-center gap-2">
+            {kind === "select" ? <span className="text-sm text-gray-500 w-4 text-center">{idx + 1}.</span> : <input type={kind} disabled className="h-4 w-4 border-gray-300" />}
+            <EditableText
+              value={option.label}
+              onChange={(value) => handleUpdateOption(idx, value)}
+              className="flex-1 text-base text-gray-800"
+              placeholder={`Opción ${idx + 1}`}
+            />
+            <button type="button" onClick={() => handleRemoveOption(idx)} disabled={choiceOptions.length <= 1} className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-100 disabled:opacity-30 disabled:hover:bg-transparent" title="Eliminar opción">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 11-2 0v6a1 1 0 112 0V8z" clipRule="evenodd" /></svg>
+            </button>
+          </div>
+        ))}
+        {choiceOptions.some((o) => !o.label.trim()) && <p className="text-xs text-amber-600">Hay opciones sin texto: no se mostrarán en el formulario.</p>}
+        <button type="button" onClick={handleAddOption} className="w-full py-2 px-3 border border-dashed border-gray-300 rounded-md text-blue-600 hover:border-blue-400 hover:text-blue-700 text-sm flex items-center justify-center gap-2 transition-colors">
+          + Añadir opción
+        </button>
+      </div>
+    )
 
     // Helper para renderizar EditableText para título y descripción
     const renderEditableField = (field: keyof QuestionData, placeholder: string, multiline: boolean = false, isTitle: boolean = false) => (
@@ -218,34 +235,12 @@ export default function QuestionItemEditor({
 
     switch (question.type) {
       case "MULTIPLE_CHOICE":
+      case "CHECKBOXES":
         return (
           <div className="space-y-3">
             {renderEditableField("title", "Título de la pregunta", false, true)}
             {renderEditableField("description", "Descripción (opcional)", true)}
-            {(question.options && question.options.length > 0
-              ? question.options
-              : [{ label: "Primera Opción" }, { label: "Segunda Opción" }]
-            ).map((option, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <input type="radio" name={`mc-display-${question.id}`} disabled className="h-4 w-4 text-blue-600 border-gray-300" />
-                <EditableText
-                  value={option.label}
-                  onChange={(value) => handleUpdateOption(idx, value)}
-                  className="flex-1 text-base text-gray-800"
-                  placeholder={`Opción ${idx + 1}`}
-                />
-              </div>
-            ))}
-             <button
-                type="button"
-                onClick={handleAddOption}
-                className="w-full py-2 px-3 border border-dashed border-gray-300 rounded-md text-blue-600 hover:border-blue-400 hover:text-blue-700 text-sm flex items-center justify-center gap-2 transition-colors mt-2"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                Añadir opción
-              </button>
+            {renderChoiceList(question.type === "CHECKBOXES" ? "checkbox" : "radio")}
           </div>
         )
       case "TEXT":
@@ -256,25 +251,20 @@ export default function QuestionItemEditor({
             <input type="text" disabled placeholder="Respuesta corta de texto" className={`${baseClasses} ${inputDisabledClasses}`} />
           </div>
         )
-      case "RATING":
-        // Now using the lifted state
+      case "RATING": {
+        const { min, max } = getRange(question)
         return (
           <div>
             {renderEditableField("title", "Título de la pregunta", false, true)}
             {renderEditableField("description", "Descripción (opcional)", true)}
-            <div className="flex gap-1 text-gray-300 text-2xl">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <span
-                  key={star}
-                  className={`cursor-pointer ${star <= displayRating ? "text-yellow-400" : ""}`}
-                  onClick={() => setDisplayRating(star)}
-                >
-                  ★
-                </span>
+            <div className="flex flex-wrap gap-2 text-gray-400">
+              {Array.from({ length: max - min + 1 }, (_, i) => min + i).map((n) => (
+                <span key={n} className="flex flex-col items-center text-xs"><span className="text-2xl">○</span>{n}</span>
               ))}
             </div>
           </div>
         )
+      }
       case "DATE":
         return (
           <div>
@@ -283,47 +273,38 @@ export default function QuestionItemEditor({
             <input type="date" disabled className={`${baseClasses} ${inputDisabledClasses}`} />
           </div>
         )
-      case "LIKERT":
+      case "MATRIX": {
+        const grid = getMatrixOptions(question)
         return (
-          <div className="overflow-x-auto">
+          <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
             {renderEditableField("title", "Título de la pregunta", false, true)}
             {renderEditableField("description", "Descripción (opcional)", true)}
-            <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-md shadow-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
-                  {["Totalmente en desacuerdo", "En desacuerdo", "Neutral", "De acuerdo", "Totalmente de acuerdo"].map(
-                    (header, idx) => (
-                      <th
-                        key={idx}
-                        className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]"
-                      >
-                        {header}
-                      </th>
-                    ),
-                  )}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {["Declaración 1", "Declaración 2"].map((statement, sIdx) => (
-                  <tr key={sIdx}>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{statement}</td>
-                    {[...Array(5)].map((_, cIdx) => (
-                      <td key={cIdx} className="px-3 py-2 whitespace-nowrap text-center">
-                        <input
-                          type="radio"
-                          name={`likert-display-${sIdx}-${question.id}`}
-                          disabled
-                          className="h-4 w-4 text-blue-600 border-gray-300"
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {(["rows", "columns"] as const).map((kind) => (
+                <div key={kind} className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700">{kind === "rows" ? "Filas (afirmaciones)" : "Columnas (respuestas)"}</p>
+                  {grid[kind].map((item, idx) => (
+                    <div key={item.value} className="flex items-center gap-2">
+                      <EditableText
+                        value={item.label}
+                        onChange={(label) => updateMatrix(kind, grid[kind].map((x, i) => (i === idx ? { ...x, label } : x)))}
+                        className="flex-1 text-sm text-gray-800 border border-gray-200 rounded px-2 py-1"
+                        placeholder={kind === "rows" ? `Fila ${idx + 1}` : `Columna ${idx + 1}`}
+                      />
+                      <button type="button" title="Eliminar" disabled={grid[kind].length <= 1} onClick={() => updateMatrix(kind, grid[kind].filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-100 disabled:opacity-30">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 11-2 0v6a1 1 0 112 0V8z" clipRule="evenodd" /></svg>
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => updateMatrix(kind, [...grid[kind], { label: kind === "rows" ? `Fila ${grid[kind].length + 1}` : `Columna ${grid[kind].length + 1}`, value: newOptionValue() }])} className="w-full py-1.5 border border-dashed border-gray-300 rounded-md text-blue-600 hover:border-blue-400 text-sm">
+                    + Añadir {kind === "rows" ? "fila" : "columna"}
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )
+      }
       case "FILE_UPLOAD":
         return (
           <div>
@@ -451,135 +432,35 @@ export default function QuestionItemEditor({
         )
       case "DROPDOWN":
         return (
-          <div>
-            {renderEditableField("title", "Título de la pregunta", false, true)}
-            {renderEditableField("description", "Descripción (opcional)", true)}
-            <div className="relative">
-              <select disabled className={`${baseClasses} appearance-none pr-8 ${inputDisabledClasses}`}>
-                <option>Selecciona una opción</option>
-                {(question.options && question.options.length > 0
-                  ? question.options
-                  : [ // <--- FIX IS HERE: Add 'value' to placeholder options
-                      { label: "Opción A", value: "Opción A" },
-                      { label: "Opción B", value: "Opción B" }
-                    ]
-                ).map((option, idx) => (
-                  // You can simplify this now, as 'value' is guaranteed
-                  <option key={idx} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                <svg
-                  className="h-5 w-5 text-gray-400"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-            </div>
-            {/* Opciones editables debajo del dropdown en modo preview */}
-            <div className="mt-3 space-y-2 border-t border-gray-200 pt-3">
-              <p className="text-sm font-medium text-gray-700">Opciones:</p>
-              {(question.options || []).map((option, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">•</span>
-                  <EditableText
-                    value={option.label}
-                    onChange={(value) => handleUpdateOption(idx, value)}
-                    className="flex-1 text-base text-gray-800"
-                    placeholder={`Opción ${idx + 1}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveOption(idx)}
-                    className="text-red-500 hover:text-red-700 text-sm p-1 rounded hover:bg-red-100 transition-colors"
-                    title="Eliminar opción"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 11-2 0v6a1 1 0 112 0V8z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={handleAddOption}
-                className="w-full py-2 px-3 border border-dashed border-gray-300 rounded-md text-blue-600 hover:border-blue-400 hover:text-blue-700 text-sm flex items-center justify-center gap-2 transition-colors mt-2"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                Añadir opción
-              </button>
-            </div>
-          </div>
-        )
-      case "SCALE":
-        // Now using the lifted state
-        return (
-          <div>
-            {renderEditableField("title", "Título de la pregunta", false, true)}
-            {renderEditableField("description", "Descripción (opcional)", true)}
-            <div className="flex items-center gap-3 mt-2">
-              <span className="text-base text-gray-700">1</span>
-              <input
-                type="range"
-                min="0"
-                max="10"
-                value={scaleDisplayValue}
-                onChange={(e) => setScaleDisplayValue(parseInt(e.target.value))}
-                className="flex-1 accent-blue-600 cursor-grab active:cursor-grabbing h-2 rounded-lg"
-              />
-              <span className="text-base text-gray-700">10</span>
-              <span className="text-base font-semibold text-blue-600 min-w-[20px] text-right">{scaleDisplayValue}</span>
-            </div>
-          </div>
-        )
-      case "CHECKBOXES":
-        return (
           <div className="space-y-3">
             {renderEditableField("title", "Título de la pregunta", false, true)}
             {renderEditableField("description", "Descripción (opcional)", true)}
-            {(question.options && question.options.length > 0
-              ? question.options
-              : [{ label: "Opción Check 1" }, { label: "Opción Check 2" }]
-            ).map((option, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <input type="checkbox" disabled className="h-4 w-4 text-blue-600 border-gray-300 rounded" />
-                <EditableText
-                  value={option.label}
-                  onChange={(value) => handleUpdateOption(idx, value)}
-                  className="flex-1 text-base text-gray-800"
-                  placeholder={`Opción ${idx + 1}`}
-                />
-              </div>
-            ))}
-             <button
-                type="button"
-                onClick={handleAddOption}
-                className="w-full py-2 px-3 border border-dashed border-gray-300 rounded-md text-blue-600 hover:border-blue-400 hover:text-blue-700 text-sm flex items-center justify-center gap-2 transition-colors mt-2"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                Añadir opción
-              </button>
+            {renderChoiceList("select")}
           </div>
         )
+      case "SCALE": {
+        const { min, max } = getRange(question)
+        return (
+          <div>
+            {renderEditableField("title", "Título de la pregunta", false, true)}
+            {renderEditableField("description", "Descripción (opcional)", true)}
+            <div className="flex items-center gap-3 mt-2 text-sm text-gray-600">
+              <span>{question.validation?.minLabel || min}</span>
+              <input type="range" min={min} max={max} disabled className="flex-1 accent-blue-600 h-2" />
+              <span>{question.validation?.maxLabel || max}</span>
+            </div>
+          </div>
+        )
+      }
       default:
         return (
           <p className="text-base text-gray-500 italic">No hay vista previa disponible para este tipo de pregunta.</p>
         )
     }
   }, [
+    question,
+    options,
+    updateMatrix,
     question.type,
     question.options,
     question.id,
@@ -590,10 +471,7 @@ export default function QuestionItemEditor({
     handleAddOption,
     handleRemoveOption,
     isTitleMissingAndRequired,
-    // Add the state variables that are now used in renderPreviewWithInlineEdit
-    displayRating,
     npsDisplayScore,
-    scaleDisplayValue
   ])
 
 
@@ -606,12 +484,25 @@ export default function QuestionItemEditor({
       {/* Botones de acción flotantes para duplicar y eliminar */}
       {isSelected && (
         <div className="absolute top-0 right-0 -mr-3 -mt-3 flex gap-2 z-10"> {/* Añadimos z-10 para asegurar que estén por encima */}
-          {/* Botón de duplicar (ejemplo) */}
+          <button
+            type="button"
+            className="p-2 bg-white rounded-full shadow-md text-gray-500 hover:text-blue-600 transition-colors disabled:opacity-30"
+            title="Subir"
+            disabled={isFirst}
+            onClick={(e) => { e.stopPropagation(); onMove(index, -1); }}
+          >▲</button>
+          <button
+            type="button"
+            className="p-2 bg-white rounded-full shadow-md text-gray-500 hover:text-blue-600 transition-colors disabled:opacity-30"
+            title="Bajar"
+            disabled={isLast}
+            onClick={(e) => { e.stopPropagation(); onMove(index, 1); }}
+          >▼</button>
           <button
             type="button"
             className="p-2 bg-white rounded-full shadow-md text-gray-500 hover:text-blue-600 transition-colors"
             title="Duplicar pregunta"
-            onClick={(e) => { e.stopPropagation(); alert("Función de duplicar no implementada"); }} // Stop propagation
+            onClick={(e) => { e.stopPropagation(); onDuplicate(index); }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h6a2 2 0 012 2v10a2 2 0 01-2 2h-6a2 2 0 01-2-2v-2m0 0H4a2 2 0 00-2 2v4a2 2 0 002 2h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2"></path></svg>
           </button>
@@ -690,25 +581,8 @@ export default function QuestionItemEditor({
 
           {renderPreviewWithInlineEdit()}
 
-          {/* Campos de configuración adicionales visibles solo si la pregunta está seleccionada */}
-          {isSelected && question.type !== "SECTION" && ( // No mostrar orden si es sección
-            <div className="mt-4 p-4 bg-gray-50 rounded-md border border-gray-200">
-              <h4 className="text-base font-semibold text-gray-700 mb-3">Configuración Adicional</h4>
-              <div>
-                <label htmlFor={`question-order-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
-                  Orden de la pregunta:
-                </label>
-                <input
-                  id={`question-order-${index}`}
-                  type="number"
-                  value={question.order === undefined || question.order === null ? "" : question.order}
-                  onChange={(e) => handleUpdate("order", Number.parseInt(e.target.value) || 0)}
-                  onClick={(e) => e.stopPropagation()} // Evita que se deseleccione al hacer clic en este input
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="Ej: 1, 2, 3..."
-                />
-              </div>
-            </div>
+          {isSelected && hasSettings(question.type) && (
+            <QuestionSettings question={question} onChange={(validation) => handleUpdate("validation", validation)} />
           )}
         </>
       )}

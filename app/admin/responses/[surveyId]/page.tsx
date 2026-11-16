@@ -30,6 +30,7 @@ import {
 } from "lucide-react"
 import { SurveyQuestionResponsesChart } from "@/components/charts/chart-pie-interactive"
 import { getParticipant } from "@/lib/responses/participant"
+import { formatAnswer } from "@/lib/forms/question-types"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
@@ -78,6 +79,9 @@ type ProcessedQuestionData = {
     | "MULTIPLE_CHOICE"
     | "CHECKBOXES"
     | "SCALE"
+    | "NET_PROMOTER_SCORE"
+    | "MATRIX"
+    | "SECTION"
   order: number
   options?: { value: string; label: string }[] | null
   responsesSummary?: { option: string; count: number }[]
@@ -113,7 +117,7 @@ function processResponsesForChart(responses: APIResponseItem[]): ProcessedQuesti
       const counts = new Map<string, number>()
       allAnswers.forEach((answer) => {
         if (answer.value !== null && answer.value !== undefined) {
-          const value = String(answer.value)
+          const value = formatAnswer(questionData, answer.value)
           counts.set(value, (counts.get(value) || 0) + 1)
         }
       })
@@ -126,7 +130,8 @@ function processResponsesForChart(responses: APIResponseItem[]): ProcessedQuesti
       allAnswers.forEach((answer) => {
         if (Array.isArray(answer.value)) {
           answer.value.forEach((v: string) => {
-            counts.set(v, (counts.get(v) || 0) + 1)
+            const label = formatAnswer(questionData, v)
+            counts.set(label, (counts.get(label) || 0) + 1)
           })
         }
       })
@@ -134,7 +139,7 @@ function processResponsesForChart(responses: APIResponseItem[]): ProcessedQuesti
         option,
         count,
       }))
-    } else if (questionData.type === "RATING" || questionData.type === "SCALE") {
+    } else if (questionData.type === "RATING" || questionData.type === "SCALE" || questionData.type === "NET_PROMOTER_SCORE") {
       const counts = new Map<string, number>()
       allAnswers.forEach((answer) => {
         if (answer.value !== null && answer.value !== undefined && answer.value !== "") {
@@ -357,6 +362,10 @@ export default function SurveyResponsesListPage() {
   // --- CÁLCULO CORREGIDO: Detección Inteligente de NPS ---
   const npsQuestion = useMemo(() => {
     // Buscamos candidatos válidos (RATING o SCALE)
+    const realNps = questions.find((q) => q.type === "NET_PROMOTER_SCORE")
+    if (realNps) return realNps
+
+    // Formularios antiguos sin tipo NPS: se intenta detectar por título y valores
     const candidates = questions.filter(
       (q) => q.type === "RATING" || q.type === "SCALE"
     )
@@ -466,10 +475,7 @@ export default function SurveyResponsesListPage() {
       appreciationQuestions.forEach((q) => {
         const a = resp.answers.find((ans) => ans.question.id === q.id)
         let v = "—"
-        if (a && a.value !== null && a.value !== undefined) {
-          if (Array.isArray(a.value)) v = a.value.join(", ")
-          else v = String(a.value)
-        }
+        if (a) v = formatAnswer(a.question, a.value) || "—"
         row.push(v)
       })
       
@@ -480,10 +486,7 @@ export default function SurveyResponsesListPage() {
       remainingQuestions.forEach((q) => {
         const a = resp.answers.find((ans) => ans.question.id === q.id)
         let v = "—"
-        if (a && a.value !== null && a.value !== undefined) {
-          if (Array.isArray(a.value)) v = a.value.join(", ")
-          else v = String(a.value)
-        }
+        if (a) v = formatAnswer(a.question, a.value) || "—"
         row.push(v)
       })
       
@@ -553,10 +556,7 @@ export default function SurveyResponsesListPage() {
     appreciationQuestions.forEach((q) => {
       const a = resp.answers.find((ans) => ans.question.id === q.id)
       let v = "—"
-      if (a && a.value !== null && a.value !== undefined) {
-        if (Array.isArray(a.value)) v = a.value.join(", ")
-        else v = String(a.value)
-      }
+      if (a) v = formatAnswer(a.question, a.value) || "—"
       row.push(v)
     })
     
@@ -567,10 +567,7 @@ export default function SurveyResponsesListPage() {
     remainingQuestions.forEach((q) => {
       const a = resp.answers.find((ans) => ans.question.id === q.id)
       let v = "—"
-      if (a && a.value !== null && a.value !== undefined) {
-        if (Array.isArray(a.value)) v = a.value.join(", ")
-        else v = String(a.value)
-      }
+      if (a) v = formatAnswer(a.question, a.value) || "—"
       row.push(v)
     })
 
@@ -633,7 +630,7 @@ export default function SurveyResponsesListPage() {
           <div className="lg:col-span-2">
             <SurveyQuestionResponsesChart
               surveyTitle={selectedSurveyTitle}
-              questions={chartData.map((q) => ({ ...q, options: q.options ?? undefined }))}
+              questions={chartData.map((q) => ({ ...q, options: Array.isArray(q.options) ? q.options : undefined }))}
               loading={loadingChart}
               error={errorChart}
             />
@@ -877,10 +874,7 @@ export default function SurveyResponsesListPage() {
                         {appreciationQuestions.map((q) => {
                           const a = resp.answers.find((ans) => ans.question.id === q.id)
                           let display = "—"
-                          if (a && a.value !== null && a.value !== undefined) {
-                            if (Array.isArray(a.value)) display = a.value.join(", ")
-                            else display = String(a.value)
-                          }
+                          if (a) display = formatAnswer(a.question, a.value) || "—"
                           return (
                             <TableCell key={q.id} className="py-2 text-center text-sm bg-gray-50/50">
                               {display}
@@ -902,10 +896,7 @@ export default function SurveyResponsesListPage() {
                         {remainingQuestions.map((q) => {
                           const a = resp.answers.find((ans) => ans.question.id === q.id)
                           let display = "—"
-                          if (a && a.value !== null && a.value !== undefined) {
-                            if (Array.isArray(a.value)) display = a.value.join(", ")
-                            else display = String(a.value)
-                          }
+                          if (a) display = formatAnswer(a.question, a.value) || "—"
                           return (
                             <TableCell key={q.id} className="py-2 text-center text-sm">
                               {display}

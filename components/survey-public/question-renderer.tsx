@@ -9,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar, Circle, Clock, Star } from 'lucide-react' // Incluí Star de nuevo
+import { Calendar, Circle } from 'lucide-react'
+import { getChoiceOptions, getMatrixOptions, getRange } from '@/lib/forms/question-types'
 
 interface PublicQuestion {
   id: string
@@ -37,20 +38,15 @@ interface QuestionRendererProps {
 export function QuestionRenderer({ question, answer, onAnswerChange, error }: QuestionRendererProps) {
   const [localValue, setLocalValue] = useState<any>(
     answer?.value ||
-    (question.type === PrismaQuestionType.CHECKBOXES || question.type === PrismaQuestionType.MULTIPLE_CHOICE
-      ? []
-      : ""),
+    (question.type === PrismaQuestionType.CHECKBOXES ? [] : ""),
   )
-  console.log(question)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [fileNameDisplay, setFileNameDisplay] = useState<string>("")
 
   useEffect(() => {
     const initialVal =
       answer?.value ||
-      (question.type === PrismaQuestionType.CHECKBOXES || question.type === PrismaQuestionType.MULTIPLE_CHOICE
-        ? []
-        : "")
+      (question.type === PrismaQuestionType.CHECKBOXES ? [] : "")
 
     if (question.type === PrismaQuestionType.FILE_UPLOAD) {
       if (initialVal === null || initialVal === "") {
@@ -69,7 +65,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
     } else {
       // Para RATING, si initialVal es "", asegúrate de que localValue sea null o el valor por defecto si lo hay.
       // Esto evita que "0" se muestre como "no calificado" si el valor inicial es una cadena vacía.
-      if (question.type === PrismaQuestionType.RATING && initialVal === "") {
+      if ((question.type === PrismaQuestionType.RATING || question.type === PrismaQuestionType.NET_PROMOTER_SCORE) && initialVal === "") {
         setLocalValue(null); // O un valor por defecto si prefieres
       } else if (JSON.stringify(localValue) !== JSON.stringify(initialVal)) {
         setLocalValue(initialVal)
@@ -194,7 +190,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
         )
 
       case PrismaQuestionType.DROPDOWN:
-        const optionsDropdown = typeof question.options === "string" ? JSON.parse(question.options) : question.options
+        const optionsDropdown = getChoiceOptions(question)
         return (
           <Select value={localValue as string} onValueChange={handleValueChange}>
             <SelectTrigger className={error ? "border-red-300" : ""}>
@@ -212,7 +208,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
         )
 
       case PrismaQuestionType.CHECKBOXES:
-        const optionsCheckboxes = typeof question.options === "string" ? JSON.parse(question.options) : question.options
+        const optionsCheckboxes = getChoiceOptions(question)
         return (
           <div className="space-y-2">
             {Array.isArray(optionsCheckboxes) &&
@@ -239,7 +235,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
         )
 
       case PrismaQuestionType.MULTIPLE_CHOICE:
-        const optionsRadio = typeof question.options === "string" ? JSON.parse(question.options) : question.options
+        const optionsRadio = getChoiceOptions(question)
         return (
           <RadioGroup value={localValue as string} onValueChange={handleValueChange}>
             {Array.isArray(optionsRadio) &&
@@ -253,8 +249,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
         )
 
       case PrismaQuestionType.RATING:
-        const minRating = question.validation?.min || 1
-        const maxRating = question.validation?.max || 5
+        const { min: minRating, max: maxRating } = getRange(question)
         const currentRating = typeof localValue === 'number' ? localValue : 0; // Asegurarse de que sea un número
 
         return (
@@ -290,8 +285,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
         )
 
       case PrismaQuestionType.SCALE:
-        const minScale = question.validation?.min || 0
-        const maxScale = question.validation?.max || 10
+        const { min: minScale, max: maxScale } = getRange(question)
         return (
           <div className="space-y-6 select-none">
             <div className="relative px-4">
@@ -299,7 +293,7 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
                 type="range"
                 min={minScale}
                 max={maxScale}
-                value={localValue || minScale}
+                value={typeof localValue === "number" ? localValue : minScale}
                 onChange={(e) => handleValueChange(Number.parseInt(e.target.value))}
                 className="w-full h-3 bg-blue-200 rounded-lg appearance-none cursor-pointer slider"
               />
@@ -324,14 +318,14 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
             <div className="bg-card border rounded-lg p-2 select-none">
               <div className="flex justify-between text-sm text-card-foreground">
                 <span>
-                  Min: <span className="font-semibold font-mono">{minScale}</span>
+                  {question.validation?.minLabel || "Min"}: <span className="font-semibold font-mono">{minScale}</span>
                 </span>
                 {/* Valor actual destacado */}
                 <span className="text-center">
-                  <div className="text-xl font-bold text-primary">{localValue || minScale}</div>
+                  <div className="text-xl font-bold text-primary">{typeof localValue === "number" ? localValue : "—"}</div>
                 </span>
                 <span>
-                  Max: <span className="font-semibold font-mono">{maxScale}</span>
+                  {question.validation?.maxLabel || "Max"}: <span className="font-semibold font-mono">{maxScale}</span>
                 </span>
               </div>
             </div>
@@ -379,14 +373,91 @@ export function QuestionRenderer({ question, answer, onAnswerChange, error }: Qu
           </div>
         )
 
+      case PrismaQuestionType.NET_PROMOTER_SCORE: {
+        const npsValue = typeof localValue === "number" ? localValue : null
+        return (
+          <div className="space-y-2">
+            <div className="grid grid-cols-11 gap-1">
+              {Array.from({ length: 11 }, (_, score) => (
+                <button
+                  key={score}
+                  type="button"
+                  onClick={() => handleValueChange(score)}
+                  aria-pressed={npsValue === score}
+                  className={`h-10 rounded-md border text-sm font-medium transition-colors ${
+                    npsValue === score
+                      ? score <= 6 ? "bg-red-500 border-red-500 text-white" : score <= 8 ? "bg-amber-500 border-amber-500 text-white" : "bg-emerald-600 border-emerald-600 text-white"
+                      : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {score}
+                </button>
+              ))}
+            </div>
+            <div className="flex justify-between text-xs text-slate-500">
+              <span>{question.validation?.minLabel || "Not at all likely"}</span>
+              <span>{question.validation?.maxLabel || "Extremely likely"}</span>
+            </div>
+          </div>
+        )
+      }
+      case PrismaQuestionType.MATRIX: {
+        const { rows, columns } = getMatrixOptions(question)
+        const cells: Record<string, string> = localValue && typeof localValue === "object" && !Array.isArray(localValue) ? localValue : {}
+        if (rows.length === 0 || columns.length === 0) {
+          return <p className="text-slate-500 text-sm">This question has no rows or columns configured.</p>
+        }
+        return (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr>
+                  <th className="p-2" />
+                  {columns.map((c) => (
+                    <th key={c.value} className="p-2 text-center font-medium text-slate-600 min-w-[72px]">{c.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.value} className="border-t border-slate-100">
+                    <td className="p-2 text-slate-800">{r.label}</td>
+                    {columns.map((c) => (
+                      <td key={c.value} className="p-2 text-center">
+                        <input
+                          type="radio"
+                          name={`${question.id}-${r.value}`}
+                          aria-label={`${r.label}: ${c.label}`}
+                          checked={cells[r.value] === c.value}
+                          onChange={() => handleValueChange({ ...cells, [r.value]: c.value })}
+                          className="h-4 w-4 accent-blue-600 cursor-pointer"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      }
+      case PrismaQuestionType.SECTION:
+        return null
       case PrismaQuestionType.SIGNATURE:
-        return <p className="text-slate-500">Campo de firma (implementación gráfica necesaria)</p>
-      case PrismaQuestionType.MATRIX:
-        return <p className="text-slate-500">Pregunta de matriz (implementación compleja necesaria)</p>
+        return <p className="text-slate-500">This question type is not available yet.</p>
 
       default:
         return <div className="text-slate-500">Tipo de pregunta no soportado o no reconocido: {question.type}</div>
     }
+  }
+
+  if (question.type === PrismaQuestionType.SECTION) {
+    return (
+      <div className="border-l-4 border-blue-500 pl-4 py-1">
+        <h2 className="text-xl font-semibold text-slate-900">{question.title}</h2>
+        {question.description && <p className="text-sm text-slate-600 mt-1 whitespace-pre-line">{question.description}</p>}
+      </div>
+    )
   }
 
   return (

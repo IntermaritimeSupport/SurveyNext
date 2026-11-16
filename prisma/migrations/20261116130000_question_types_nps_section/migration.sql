@@ -1,0 +1,3 @@
+-- Fase 3: nuevos tipos de pregunta
+ALTER TYPE "QuestionType" ADD VALUE IF NOT EXISTS 'NET_PROMOTER_SCORE';
+ALTER TYPE "QuestionType" ADD VALUE IF NOT EXISTS 'SECTION';

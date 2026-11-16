@@ -13,6 +13,8 @@ import { toast } from "../ui/use-toast";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
+import type { MatrixOptions } from "@/lib/forms/question-types";
+
 export interface QuestionOption {
   label: string;
   value: string;
@@ -25,7 +27,7 @@ export interface QuestionData {
   type: string;
   required: boolean;
   order: number;
-  options: QuestionOption[] | null;
+  options: QuestionOption[] | MatrixOptions | null; // MATRIX stores { rows, columns }
   validation?: Record<string, any> | null;
 }
 

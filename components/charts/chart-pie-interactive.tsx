@@ -53,6 +53,9 @@ interface ChartQuestionData {
     | "MULTIPLE_CHOICE"
     | "CHECKBOXES"
     | "SCALE"
+    | "NET_PROMOTER_SCORE"
+    | "MATRIX"
+    | "SECTION"
   order: number
   options?: { value: string; label: string }[]
   responsesSummary?: { option: string; count: number }[]
@@ -179,7 +182,7 @@ function QuestionChart({ question }: QuestionChartProps) {
       )
     }
 
-    if (question.type === "RATING" || question.type === "SCALE") {
+    if (question.type === "RATING" || question.type === "SCALE" || question.type === "NET_PROMOTER_SCORE") {
       return (
         <ChartContainer config={chartConfig} className="h-[200px] w-full">
           <AreaChart
@@ -326,7 +329,8 @@ export function SurveyQuestionResponsesChart({
           q.type === "CHECKBOXES" ||
           q.type === "DROPDOWN" ||
           q.type === "RATING" ||
-          q.type === "SCALE",
+          q.type === "SCALE" ||
+          q.type === "NET_PROMOTER_SCORE",
       ),
     [questions, mappedQuestions],
   )
