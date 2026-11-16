@@ -14,8 +14,6 @@ import {
   Mail,
   Hash,
   CheckCircle,
-  Building,
-  Ship,
   Globe,
   Star,
   Circle,
@@ -23,6 +21,7 @@ import {
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { QuestionType as PrismaQuestionType } from "@prisma/client"
+import { getParticipant } from "@/lib/responses/participant"
 
 // ------------------ Tipos ------------------
 interface APIQuestion {
@@ -43,10 +42,6 @@ interface APIAnswer {
 interface APISurveyResponseDetail {
   id: string
   email: string | null
-  position: string | null
-  ships: string | null
-  fullName: string | null
-  company: string | null
   ipAddress: string | null
   userAgent: string | null
   startedAt: string
@@ -252,7 +247,7 @@ export default function ResponseDetailPage() {
           <Button size="sm" variant="outline" onClick={() => router.back()} className="flex items-center gap-1">
             <ChevronLeft className="h-3 w-3" /> Volver
           </Button>
-          <h1 className="text-lg md:text-xl font-semibold text-indigo-700">Respuesta de {response.fullName || "anonimo"}</h1>
+          <h1 className="text-lg md:text-xl font-semibold text-indigo-700">Respuesta de {getParticipant(response).name}</h1>
           <div />
         </div>
 
@@ -266,9 +261,7 @@ export default function ResponseDetailPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-2 text-base text-slate-700">
             <div className="flex items-center gap-1"><Hash className="h-3 w-3 text-indigo-500" /> ID: {response.id}</div>
-            <div className="flex items-center gap-1"><User className="h-3 w-3 text-indigo-500" /> {response.fullName || response.user?.name || "Anónimo"}</div>
-            <div className="flex items-center gap-1"><Building className="h-3 w-3 text-indigo-500" /> {response.company || "Sin compañía"}</div>
-            <div className="flex items-center gap-1"><Ship className="h-3 w-3 text-indigo-500" /> {response.ships || "N/A"}</div>
+            <div className="flex items-center gap-1"><User className="h-3 w-3 text-indigo-500" /> {getParticipant(response).name}</div>
             {response.email && <div className="flex items-center gap-1"><Mail className="h-3 w-3 text-indigo-500" /> {response.email}</div>}
             <div className="flex items-center gap-1"><Calendar className="h-3 w-3 text-indigo-500" /> Inicio: {format(new Date(response.startedAt), "PPPp", { locale: es })}</div>
             {response.completedAt && <div className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-emerald-500" /> Fin: {format(new Date(response.completedAt), "PPPp", { locale: es })}</div>}

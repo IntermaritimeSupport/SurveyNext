@@ -48,11 +48,7 @@ model Question {
 
 model SurveyResponse {
   id          String   @id @default(cuid())
-  email       String?  // Optional for anonymous surveys
-  company     String?
-  fullName   String?
-  ships     Int?
-  position   String?
+  email       String?  // Respondent email, only stored when the survey has collectEmail
   ipAddress   String?
   userAgent   String?
   startedAt   DateTime @default(now())
@@ -118,6 +114,7 @@ model Survey {
   isAnonymous Boolean  @default(false)
   showProgress Boolean @default(true)
   allowMultipleResponses Boolean @default(false)
+  collectEmail Boolean @default(true) // Ask the respondent for an email before the questions
   startDate   DateTime?
   endDate     DateTime?
   createdAt   DateTime @default(now())
