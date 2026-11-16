@@ -1,7 +1,7 @@
 // src/app/api/admin/dashboard-stats/route.ts
 import { NextResponse } from 'next/server';
-import { PrismaClient, SurveyStatus } from '@prisma/client'
-const prisma = new PrismaClient()
+import { SurveyStatus } from '@prisma/client'
+import prisma from '@/lib/prisma'
 
 // Interfaz para las estadísticas que la API devolverá
 interface DashboardStats {

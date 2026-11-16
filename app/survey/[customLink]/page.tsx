@@ -4,7 +4,6 @@
 
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
-// import { surveyStore } from "@/lib/survey-store" // <-- ELIMINAR ESTO
 // import type { Survey } from "@/types/survey" // <-- Ajustar esta importación de tipo
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"

@@ -6,9 +6,12 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Iniciando script de seed...');
 
-  // Datos para el usuario administrador
-  const adminEmail = process.env.ADMIN_EMAIL || 'david@intermaritime.org';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Lexus0110.'; // ¡Cambia esto en producción!
+  // Credenciales del administrador: obligatorias por variable de entorno (nunca en el código)
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminEmail || !adminPassword) {
+    throw new Error('Define ADMIN_EMAIL y ADMIN_PASSWORD en .env antes de ejecutar el seed.');
+  }
   const adminName = 'Administrador Principal';
 
   // Hashear la contraseña

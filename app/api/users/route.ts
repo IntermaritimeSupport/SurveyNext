@@ -1,26 +1,9 @@
 // app/api/public/survey-questions/[customlink]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient, Role } from '@prisma/client';
+import { Role } from '@prisma/client'
 import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
-
-const allowedOrigins = [
-  'http://localhost:3000',
-  'https://survey-next-git-main-intermaritime.vercel.app',
-  'https://surveys.intermaritime.org',
-];
-
-// Función auxiliar para CORS
-function withCors(origin: string | null) {
-  const isAllowed = origin && allowedOrigins.includes(origin);
-  return {
-    'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token',
-    'Access-Control-Allow-Credentials': 'true',
-  };
-}
+import prisma from '@/lib/prisma'
+import { withCors } from '@/lib/cors'
 
 // Preflight request (OPTIONS)
 export async function OPTIONS(req: NextRequest) {
@@ -73,7 +56,6 @@ export async function POST(request: NextRequest) {
     }
     requestingUserRole = requestingUserRoleHeader as Role;
     // --- Fin de Autenticación y Autorización del Solicitante ---
-
 
     // 2. Validación básica de campos obligatorios para el nuevo usuario
     if (!email || !name || !password) {
