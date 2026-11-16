@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, SurveyStatus } from '@prisma/client'
 import { validateAnswer } from '@/lib/forms/validate'
+import { visibleQuestionIds } from '@/lib/forms/logic'
 import { isAnswerable, type QuestionLike } from '@/lib/forms/question-types'
 import prisma from '@/lib/prisma'
 import { withCors } from '@/lib/cors'
@@ -125,6 +126,8 @@ export async function POST(request: NextRequest, { params: resolvedParams }: Pro
             required: true,
             options: true,
             validation: true,
+            order: true,
+            logic: true,
           },
         },
       },
@@ -176,9 +179,11 @@ export async function POST(request: NextRequest, { params: resolvedParams }: Pro
     // --- Answer validation: same rules as the public form (lib/forms/validate.ts) ---
     const submitted = new Map(answers.map(a => [a.questionId, a.value]));
     const answersToCreate: { questionId: string; value: any }[] = [];
+    // Questions hidden by conditional logic are neither required nor stored
+    const visible = visibleQuestionIds(survey.questions, submitted);
 
     for (const question of survey.questions) {
-      if (!isAnswerable(question.type)) continue;
+      if (!isAnswerable(question.type) || !visible.has(question.id)) continue;
       const wasSubmitted = submitted.has(question.id);
       // Partial saves only validate what was sent; a complete submission must cover every question
       if (!wasSubmitted && !isComplete) continue;

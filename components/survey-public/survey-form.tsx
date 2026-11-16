@@ -15,6 +15,7 @@ import { CheckCircle, ChevronLeft, ChevronRight, Loader2, Send } from "lucide-re
 import Imagenes from "@/lib/images"
 import { validateAnswer as validateSharedAnswer } from "@/lib/forms/validate"
 import { isAnswerable } from "@/lib/forms/question-types"
+import { paginate, visibleQuestionIds } from "@/lib/forms/logic"
 
 interface PublicSurvey {
   id: string
@@ -38,6 +39,7 @@ interface PublicQuestion {
   order: number
   options: any
   validation: Record<string, any> | null
+  logic?: unknown
 }
 
 interface Answer {
@@ -71,25 +73,29 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
   const sortedQuestions = useMemo(() => initialQuestions.sort((a, b) => a.order - b.order), [initialQuestions])
 
-  // ✅ Lógica de paginación condicional
-  const enablePagination = sortedQuestions.length > PAGINATION_THRESHOLD
-  const questionsPerPage = enablePagination ? DEFAULT_QUESTIONS_PER_PAGE : sortedQuestions.length
+  // Páginas: cada SECTION empieza una página (sin secciones: hasta 5 en una, si no de 10 en 10).
+  // La lógica condicional decide qué preguntas se ven; las páginas sin preguntas visibles se saltan.
+  const pages = useMemo(() => paginate(sortedQuestions, DEFAULT_QUESTIONS_PER_PAGE, PAGINATION_THRESHOLD), [sortedQuestions])
+  const visibleIds = useMemo(() => visibleQuestionIds(sortedQuestions, currentAnswers), [sortedQuestions, currentAnswers])
+  const activePages = useMemo(
+    () => pages.map((p) => p.filter((q) => visibleIds.has(q.id))).filter((p) => p.some((q) => isAnswerable(q.type))),
+    [pages, visibleIds],
+  )
 
-  const totalQuestionPages = Math.ceil(sortedQuestions.length / questionsPerPage)
+  const totalQuestionPages = Math.max(activePages.length, 1)
+  const enablePagination = totalQuestionPages > 1
   const totalSteps = totalQuestionPages + (isEmailRequired ? 1 : 0)
+  const safePageIndex = Math.min(currentPageIndex, totalQuestionPages - 1)
 
   let currentStep = 0
   if (isShowingEmailStep) {
     currentStep = 1
   } else {
-    currentStep = currentPageIndex + 1 + (isEmailRequired ? 1 : 0)
+    currentStep = safePageIndex + 1 + (isEmailRequired ? 1 : 0)
   }
 
-  const startIndex = currentPageIndex * questionsPerPage
-  const endIndex = Math.min(startIndex + questionsPerPage, sortedQuestions.length)
-  const currentQuestionsBlock = sortedQuestions.slice(startIndex, endIndex)
-
-  const isLastQuestionPage = currentPageIndex === totalQuestionPages - 1
+  const currentQuestionsBlock = activePages[safePageIndex] ?? []
+  const isLastQuestionPage = safePageIndex >= totalQuestionPages - 1
 
   // Same rules the server applies (lib/forms/validate.ts)
   const validateAnswer = (question: PublicQuestion, answerValue: any): string | null => {
@@ -147,7 +153,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
     let hasPageErrors = false
     const newPageErrors = new Map<string, string>()
-    currentQuestionsBlock.forEach((q) => {
+    currentQuestionsBlock.filter((q) => isAnswerable(q.type)).forEach((q) => {
       const answerValue = currentAnswers.get(q.id)
       const error = validateAnswer(q, answerValue)
       if (error) {
@@ -163,8 +169,8 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
     }
 
     // ✅ Lógica de paginación condicional
-    if (enablePagination && !isLastQuestionPage) {
-      setCurrentPageIndex((prev) => prev + 1)
+    if (!isLastQuestionPage) {
+      setCurrentPageIndex(safePageIndex + 1)
     } else {
       handleSubmit()
     }
@@ -179,14 +185,14 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
     }
 
     // Si estamos en la primera página de preguntas y el email es requerido, volvemos al paso del email
-    if (currentPageIndex === 0 && isEmailRequired) {
+    if (safePageIndex === 0 && isEmailRequired) {
       setIsShowingEmailStep(true)
       return
     }
 
     // Solo retrocede si hay páginas anteriores
-    if (currentPageIndex > 0) {
-      setCurrentPageIndex((prev) => prev - 1)
+    if (safePageIndex > 0) {
+      setCurrentPageIndex(safePageIndex - 1)
     }
   }
 
@@ -199,7 +205,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
     let hasFinalErrors = false
     const finalErrors = new Map<string, string>()
-    sortedQuestions.forEach((q) => {
+    sortedQuestions.filter((q) => visibleIds.has(q.id) && isAnswerable(q.type)).forEach((q) => {
       const answerValue = currentAnswers.get(q.id)
       const error = validateAnswer(q, answerValue)
       if (error) {
@@ -217,7 +223,8 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
     setIsLoading(true)
     setSubmissionError(null)
 
-    const answersForApi: Answer[] = sortedQuestions.filter((q) => isAnswerable(q.type)).map((q) => ({
+    // Solo se envían las preguntas visibles (las ocultas por lógica no se guardan)
+    const answersForApi: Answer[] = sortedQuestions.filter((q) => isAnswerable(q.type) && visibleIds.has(q.id)).map((q) => ({
       questionId: q.id,
       value: currentAnswers.has(q.id) ? (currentAnswers.get(q.id) ?? null) : null,
     }))
@@ -406,7 +413,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
             <Button
               variant="outline"
               onClick={handlePrevious}
-              disabled={isShowingEmailStep && (!enablePagination || currentPageIndex === 0)}
+              disabled={isShowingEmailStep || (safePageIndex === 0 && !isEmailRequired)}
               className="w-full sm:w-auto bg-white hover:bg-slate-50 border-slate-300 order-2 sm:order-1"
             >
               <ChevronLeft className="h-4 w-4 mr-2" />
@@ -416,7 +423,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
             <div className="text-xs sm:text-sm text-slate-500 bg-white px-2 sm:px-3 py-1 rounded-full border border-slate-200 order-1 sm:order-2 text-center">
               {isShowingEmailStep
                 ? `Step ${currentStep} of ${totalSteps}: Contact Information`
-                : `Step ${currentStep} of ${totalSteps}: Questions ${startIndex + 1}-${endIndex}`}
+                : `Step ${currentStep} of ${totalSteps}`}
             </div>
 
             <Button
@@ -428,7 +435,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...
                 </>
-              ) : !enablePagination || (isLastQuestionPage && !isShowingEmailStep) ? (
+              ) : isLastQuestionPage && !isShowingEmailStep ? (
                 <>
                   <Send className="h-4 w-4 mr-2" />
                   Submit

@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import QuestionItemEditor from "./QuestionItemEditor";
 import type { QuestionData } from "./survey-manager"; // Using 'type' for type imports is a good practice
 import { CHOICE_TYPES, getMatrixOptions, newOptionValue } from "@/lib/forms/question-types";
+import { getLogic } from "@/lib/forms/logic";
 import { useRouter } from "next/navigation";
 
 
@@ -76,6 +77,14 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
       // Opciones: las preguntas de elección necesitan al menos una opción con texto
       if (CHOICE_TYPES.has(q.type) && !(Array.isArray(q.options) && q.options.some((o) => o.label?.trim()))) {
         errors.push(`La pregunta ${index + 1} necesita al menos una opción con texto.`);
+      }
+      // Lógica: solo puede depender de preguntas anteriores
+      const logic = getLogic(q);
+      if (logic) {
+        const earlier = new Set(currentQuestions.slice(0, index).map((x) => x.id));
+        if (logic.showIf.some((c) => !earlier.has(c.questionId))) {
+          errors.push(`La pregunta ${index + 1} tiene una condición que depende de una pregunta posterior o eliminada.`);
+        }
       }
       if (q.type === "MATRIX") {
         const grid = getMatrixOptions(q);
@@ -332,6 +341,7 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
           onMove={moveQuestion}
           isFirst={index === 0}
           isLast={index === questions.length - 1}
+          previousQuestions={questions.slice(0, index)}
           // Pasa el estado de validación al QuestionItemEditor
           isTitleMissingAndRequired={question.required && question.type !== "SECTION" && (!question.title || question.title.trim() === "")}
         />

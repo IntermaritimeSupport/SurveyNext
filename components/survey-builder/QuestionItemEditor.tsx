@@ -3,6 +3,7 @@
 import { useCallback, useState, useRef, useEffect } from "react"
 import type { QuestionData, QuestionOption } from "./survey-manager"
 import QuestionSettings, { hasSettings } from "./QuestionSettings"
+import LogicEditor from "./LogicEditor"
 import { QUESTION_TYPES, getMatrixOptions, getRange, newOptionValue, type ChoiceOption } from "@/lib/forms/question-types"
 
 // Types offered in the builder (FILE_UPLOAD / SIGNATURE stay hidden until implemented)
@@ -137,6 +138,7 @@ interface QuestionItemEditorProps {
   onMove: (index: number, direction: -1 | 1) => void
   isFirst: boolean
   isLast: boolean
+  previousQuestions: QuestionData[]
   isSelected: boolean // Si la pregunta está actualmente seleccionada (editando sus propiedades globales)
   isTitleMissingAndRequired: boolean;
 }
@@ -154,6 +156,7 @@ export default function QuestionItemEditor({
   onMove,
   isFirst,
   isLast,
+  previousQuestions,
 }: QuestionItemEditorProps) {
   const [npsDisplayScore, setNpsDisplayScore] = useState<number | null>(null)
 
@@ -583,6 +586,12 @@ export default function QuestionItemEditor({
 
           {isSelected && hasSettings(question.type) && (
             <QuestionSettings question={question} onChange={(validation) => handleUpdate("validation", validation)} />
+          )}
+          {isSelected && (
+            <LogicEditor question={question} previousQuestions={previousQuestions} onChange={(logic) => handleUpdate("logic", logic)} />
+          )}
+          {!isSelected && question.logic && (
+            <p className="text-xs text-indigo-700 mt-2">↳ Se muestra solo si se cumplen sus condiciones</p>
           )}
         </>
       )}
