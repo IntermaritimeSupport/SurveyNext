@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { PlusCircle, Search, Eye, Edit, Trash2, MoreHorizontal, Loader2, PencilIcon, EyeIcon } from "lucide-react"
+import { PlusCircle, Search, Eye, Edit, Trash2, MoreHorizontal, Loader2, PencilIcon, EyeIcon, Copy } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { LinkSharing } from "@/components/admin/link-sharing"
@@ -36,21 +37,21 @@ export default function SurveysPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Función para cargar las encuestas desde la API
+  // Función para cargar los formularios desde la API
   const fetchSurveys = async () => {
     setLoading(true)
     setError(null)
     try {
       const response = await fetch(`${API_BASE_URL}/api/surveys`)
       if (!response.ok) {
-        throw new Error(`Error al cargar encuestas: ${response.statusText}`)
+        throw new Error(`Error al cargar formularios: ${response.statusText}`)
       }
       const data: APISurvey[] = await response.json()
       setSurveys(data)
       setFilteredSurveys(data)
     } catch (err: any) {
       console.error("Error fetching surveys:", err)
-      setError("Error al cargar las encuestas. Por favor, inténtalo de nuevo.")
+      setError("Error al cargar los formularios. Por favor, inténtalo de nuevo.")
     } finally {
       setLoading(false)
     }
@@ -70,25 +71,37 @@ export default function SurveysPage() {
     setFilteredSurveys(filtered)
   }, [searchTerm, surveys])
 
-  // Función para eliminar encuestas (ahora interactúa con la API)
+  const router = useRouter()
+  const handleDuplicate = async (surveyId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/surveys/${surveyId}/duplicate`, { method: "POST" })
+      if (!response.ok) throw new Error((await response.json()).message || response.statusText)
+      const copy = await response.json()
+      router.push(`/admin/surveys/${copy.id}/edit`)
+    } catch (err: any) {
+      setError(`Error al duplicar el formulario: ${err.message}`)
+    }
+  }
+
+  // Función para eliminar formularios (ahora interactúa con la API)
   const handleDelete = async (surveyId: string) => {
-    if (confirm("¿Estás seguro de que quieres eliminar esta encuesta? Esta acción es irreversible.")) {
+    if (confirm("¿Estás seguro de que quieres eliminar este formulario? Esta acción es irreversible.")) {
       try {
         const response = await fetch(`${API_BASE_URL}/api/surveys/${surveyId}`, {
           method: "DELETE",
         })
 
         if (!response.ok) {
-          throw new Error(`Error al eliminar la encuesta: ${response.statusText}`)
+          throw new Error(`Error al eliminar el formulario: ${response.statusText}`)
         }
 
         const updatedSurveys = surveys.filter((s) => s.id !== surveyId)
         setSurveys(updatedSurveys)
         setFilteredSurveys(updatedSurveys)
-        alert("Encuesta eliminada correctamente.")
+        alert("Formulario eliminado correctamente.")
       } catch (err: any) {
         console.error("Error deleting survey:", err)
-        setError(`Error al eliminar la encuesta: ${err.message}`)
+        setError(`Error al eliminar el formulario: ${err.message}`)
       }
     }
   }
@@ -99,13 +112,13 @@ export default function SurveysPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Gestión de Encuestas</h1>
-            <p className="text-slate-600 text-sm">Administra todas tus encuestas desde aquí</p>
+            <h1 className="text-2xl font-bold text-slate-900">Gestión de Formularios</h1>
+            <p className="text-slate-600 text-sm">Administra todas tus formularios desde aquí</p>
           </div>
           <Link href="/admin/surveys/create">
             <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
               <PlusCircle className="h-4 w-4 mr-2" />
-              Nueva Encuesta
+              Nuevo Formulario
             </Button>
           </Link>
         </div>
@@ -116,7 +129,7 @@ export default function SurveysPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
               <Input
-                placeholder="Buscar encuestas..."
+                placeholder="Buscar formularios..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -143,16 +156,16 @@ export default function SurveysPage() {
                     <PlusCircle className="h-10 w-10 mx-auto" />
                   </div>
                   <h3 className="text-base font-medium text-slate-900 mb-2">
-                    {searchTerm ? "No se encontraron encuestas" : "No hay encuestas creadas"}
+                    {searchTerm ? "No se encontraron formularios" : "No hay formularios creados"}
                   </h3>
                   <p className="text-slate-500 text-sm mb-4">
                     {searchTerm
                       ? "Intenta con otros términos de búsqueda"
-                      : "Comienza creando tu primera encuesta para recopilar datos"}
+                      : "Comienza creando tu primer formulario para recopilar datos"}
                   </p>
                   {!searchTerm && (
                     <Link href="/admin/surveys/create">
-                      <Button size="sm">Crear Primera Encuesta</Button>
+                      <Button size="sm">Crear Primer Formulario</Button>
                     </Link>
                   )}
                 </CardContent>
@@ -161,13 +174,13 @@ export default function SurveysPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[300px]">Encuesta</TableHead>
+                      <TableHead className="w-[300px]">Formulario</TableHead>
                       <TableHead className="w-[100px]">Estado</TableHead>
                       <TableHead className="w-[80px]">Preguntas</TableHead>
                       <TableHead className="w-[80px]">Respuestas</TableHead>
                       <TableHead className="w-[120px]">Enlace</TableHead>
                       <TableHead className="w-[120px]">Anonimo</TableHead>
-                      <TableHead className="w-[100px]">Creada</TableHead>
+                      <TableHead className="w-[100px]">Creado</TableHead>
                       <TableHead className="w-[80px]">Compartir</TableHead>
                       <TableHead className="w-[80px] text-center">Acciones</TableHead>
                     </TableRow>
@@ -177,7 +190,10 @@ export default function SurveysPage() {
                       <TableRow key={survey.id}>
                         <TableCell className="py-3">
                           <div>
-                            <div className="font-medium text-sm line-clamp-1">{survey.title}</div>
+                            <div className="font-medium text-sm line-clamp-1">
+                              {survey.title}
+                              {survey.isTemplate && <Badge variant="outline" className="ml-2 text-[10px] align-middle">Plantilla</Badge>}
+                            </div>
                             <div className="text-xs text-slate-500 line-clamp-1 mt-1">{survey.description}</div>
                           </div>
                         </TableCell>
@@ -186,7 +202,7 @@ export default function SurveysPage() {
                             variant={survey.status === SurveyStatus.PUBLISHED ? "default" : "secondary"}
                             className="text-xs"
                           >
-                            {survey.status === SurveyStatus.PUBLISHED ? "Activa" : "Borrador"}
+                            {survey.status === SurveyStatus.PUBLISHED ? "Activo" : "Borrador"}
                           </Badge>
                         </TableCell>
                         <TableCell className="py-3">
@@ -199,10 +215,9 @@ export default function SurveysPage() {
                           <span className="text-xs text-slate-500 font-mono">/{survey.customLink}</span>
                         </TableCell>
                         <TableCell className="py-3">
-                          <Badge className="text-xs"
-                          >
-                            {survey.isAnonymous === survey.isAnonymous ? "true" : "false"}
-                          </Badge>                        
+                          <Badge variant={survey.isAnonymous ? "default" : "outline"} className="text-xs">
+                            {survey.isAnonymous ? "Sí" : "No"}
+                          </Badge>
                         </TableCell>
                         <TableCell className="py-3">
                           <span className="text-xs text-slate-500">
@@ -224,6 +239,9 @@ export default function SurveysPage() {
                             <Link href={`/admin/responses/${survey.id}`} passHref>
                               <EyeIcon className="w-5 h-5"/>  
                             </Link>
+                            <button type="button" title="Duplicar" onClick={() => handleDuplicate(survey.id)} className="text-gray-500 hover:text-gray-700">
+                              <Copy className="w-5 h-5" />
+                            </button>
                             <span onClick={() => handleDelete(survey.id)}>
                               <Trash2 className="w-5 h-5 text-red-500"/>  
                             </span>

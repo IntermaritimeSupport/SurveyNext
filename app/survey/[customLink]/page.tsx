@@ -57,7 +57,7 @@ export default function SurveyPublicPage() {
 
   useEffect(() => {
     if (!customLink) {
-      setError("Enlace de encuesta no válido.");
+      setError("Enlace de formulario no válido.");
       setLoading(false);
       return;
     }
@@ -71,14 +71,14 @@ export default function SurveyPublicPage() {
         if (!response.ok) {
           const errorData = await response.json();
           // Los mensajes de error personalizados de la API serán útiles aquí
-          throw new Error(errorData.message || 'Error al cargar la encuesta. Inténtalo de nuevo.');
+          throw new Error(errorData.message || 'Error al cargar el formulario. Inténtalo de nuevo.');
         }
 
         const data: SurveyData = await response.json();
-        setSurveyData(data); // Almacena tanto la encuesta como las preguntas
+        setSurveyData(data); // Almacena tanto el formulario como las preguntas
       } catch (err: any) {
         console.error("Error fetching public survey:", err);
-        setError(err.message || "Error al cargar la encuesta.");
+        setError(err.message || "Error al cargar el formulario.");
       } finally {
         setLoading(false);
       }
@@ -95,7 +95,7 @@ export default function SurveyPublicPage() {
     )
   }
 
-  // Si hay error o no se pudo cargar la data de la encuesta
+  // Si hay error o no se pudo cargar la data del formulario
   if (error || !surveyData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
@@ -104,7 +104,7 @@ export default function SurveyPublicPage() {
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="h-8 w-8 text-red-600" />
             </div>
-            <CardTitle className="text-xl text-slate-900">Encuesta No Disponible</CardTitle>
+            <CardTitle className="text-xl text-slate-900">Formulario No Disponible</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <Alert variant="destructive">
@@ -115,8 +115,8 @@ export default function SurveyPublicPage() {
               <p className="text-sm text-slate-600">Posibles razones:</p>
               <ul className="text-xs text-slate-500 space-y-1">
                 <li>• El enlace es incorrecto o ha expirado</li>
-                <li>• La encuesta ha sido desactivada</li>
-                <li>• La encuesta ha sido eliminada</li>
+                <li>• El formulario ha sido desactivada</li>
+                <li>• El formulario ha sido eliminada</li>
               </ul>
             </div>
 
@@ -134,6 +134,6 @@ export default function SurveyPublicPage() {
     )
   }
 
-  // Si la encuesta y las preguntas se cargaron correctamente, pásalas a SurveyForm
+  // Si el formulario y las preguntas se cargaron correctamente, pásalas a SurveyForm
   return <SurveyForm survey={surveyData?.survey} questions={surveyData.questions} />
 }

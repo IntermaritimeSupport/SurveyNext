@@ -51,14 +51,14 @@ export function DashboardStats() {
   // y lo puedes usar para construir las tarjetas.
   const statCards = [
     {
-      title: "Total de Encuestas",
+      title: "Total de Formularios",
       value: stats.totalSurveys,
       icon: FileText,
       color: "text-blue-600",
       bgColor: "bg-blue-100",
     },
     {
-      title: "Encuestas Publicadas",
+      title: "Formularios Publicados",
       value: stats.publishedSurveys,
       icon: TrendingUp,
       color: "text-green-600",

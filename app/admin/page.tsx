@@ -28,7 +28,7 @@ export default function AdminDashboard() {
         // necesitarías endpoints adicionales o un `include` más profundo.
         const response = await fetch("/api/surveys?include=_count&include=questions")
         if (!response.ok) {
-          throw new Error(`Error al cargar datos de encuestas: ${response.status}`)
+          throw new Error(`Error al cargar datos de formularios: ${response.status}`)
         }
         const data: APISurveyWithQuestions[] = await response.json()
         setAllSurveys(data)
@@ -43,8 +43,8 @@ export default function AdminDashboard() {
   }, [])
   const quickActions = [
     {
-      title: "Crear Nueva Encuesta",
-      description: "Diseña una encuesta personalizada",
+      title: "Crear Nuevo Formulario",
+      description: "Diseña un formulario personalizado",
       href: "/admin/surveys/create",
       icon: PlusCircle,
       color: "bg-blue-600 hover:bg-blue-700",
@@ -72,12 +72,12 @@ export default function AdminDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Panel de Administración</h1>
-            <p className="text-slate-600 mt-0.5 text-sm">Gestiona tu sistema de encuestas desde aquí</p>
+            <p className="text-slate-600 mt-0.5 text-sm">Gestiona tu sistema de formularios desde aquí</p>
           </div>
           <Link href="/admin/surveys/create">
             <Button className="bg-blue-600 hover:bg-blue-700" size="sm">
               <PlusCircle className="h-4 w-4 mr-2" />
-              Nueva Encuesta
+              Nuevo Formulario
             </Button>
           </Link>
         </div>

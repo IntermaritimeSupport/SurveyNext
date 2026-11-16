@@ -140,7 +140,7 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
     e.preventDefault();
 
     if (!surveyId) {
-      alert("Error: ID de encuesta no disponible para guardar preguntas.");
+      alert("Error: ID de formulario no disponible para guardar preguntas.");
       return;
     }
     if (!validateQuestions(questions)) {
@@ -307,7 +307,7 @@ export default function QuestionManager({ surveyId }: QuestionManagerProps) {
     <form onSubmit={handleQuestionsSubmit} className="space-y-6">
       {questions.length === 0 && (
         <p className="text-gray-600 text-center py-4">
-          Aún no hay preguntas para esta encuesta. ¡Añade la primera!
+          Aún no hay preguntas para este formulario. ¡Añade la primera!
         </p>
       )}
       {hasMissingRequiredTitles && (

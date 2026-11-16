@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { QuestionType, SurveyStatus } from '@prisma/client'
 import prisma from '@/lib/prisma'
 import { withCors } from '@/lib/cors'
+import { sanitizeTheme } from '@/lib/forms/theme'
 
 // Preflight request (OPTIONS)
 export async function OPTIONS(req: NextRequest) {
@@ -55,7 +56,7 @@ export async function PUT(request: NextRequest, { params: resolvedParams }: Prop
     const body = await request.json();
     const {
       title, description, customLink, isAnonymous, showProgress,
-      allowMultipleResponses, collectEmail, startDate, endDate, isPublished,
+      allowMultipleResponses, collectEmail, isTemplate, theme, startDate, endDate, isPublished,
       questions: incomingQuestions
     } = body;
 
@@ -68,6 +69,9 @@ export async function PUT(request: NextRequest, { params: resolvedParams }: Prop
     const newSurveyStatus = isPublished ? SurveyStatus.PUBLISHED : SurveyStatus.DRAFT;
 
     const transactionResult = await prisma.$transaction(async tx => {
+      // Questions are synced only when explicitly sent; the builder saves them through
+      // /api/surveys/[id]/questions, so a settings-only update never deletes questions.
+      if (Array.isArray(incomingQuestions)) {
       const existingDbQuestions = await tx.question.findMany({ where: { surveyId } });
       const existingDbQuestionIds = new Set(existingDbQuestions.map(q => q.id));
 
@@ -112,6 +116,7 @@ export async function PUT(request: NextRequest, { params: resolvedParams }: Prop
       }
 
       await Promise.all([...updateOperations, ...createOperations]);
+      }
 
       const updatedSurvey = await tx.survey.update({
         where: { id: surveyId },
@@ -124,6 +129,8 @@ export async function PUT(request: NextRequest, { params: resolvedParams }: Prop
           showProgress,
           allowMultipleResponses,
           collectEmail,
+          ...(typeof isTemplate === 'boolean' && { isTemplate }),
+          ...(theme !== undefined && { theme: sanitizeTheme(theme) as object }),
           startDate: parsedStartDate,
           endDate: parsedEndDate,
         },

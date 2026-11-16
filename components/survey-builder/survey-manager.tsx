@@ -14,6 +14,7 @@ import { toast } from "../ui/use-toast";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 import type { MatrixOptions } from "@/lib/forms/question-types";
+import type { FormTheme } from "@/lib/forms/theme";
 
 export interface QuestionOption {
   label: string;
@@ -41,6 +42,8 @@ export interface SurveyData {
   showProgress: boolean;
   allowMultipleResponses: boolean;
   collectEmail: boolean;
+  isTemplate: boolean;
+  theme?: FormTheme | null;
   startDate: string;
   endDate: string;
   isPublished: boolean;
@@ -66,6 +69,8 @@ export default function SurveyManager() {
     showProgress: true,
     allowMultipleResponses: false,
     collectEmail: true,
+    isTemplate: false,
+    theme: null,
     startDate: "",
     endDate: "",
     isPublished: false,
@@ -90,20 +95,20 @@ export default function SurveyManager() {
             });
 
           } else {
-            console.error("Error al cargar la encuesta:", response.statusText);
+            console.error("Error al cargar el formulario:", response.statusText);
             toast({
               title: "Error",
-              description: "Error al cargar la encuesta.",
+              description: "Error al cargar el formulario.",
               duration: 5000,
               variant: "destructive",
             });
             router.push('/admin/surveys');
           }
         } catch (error) {
-          console.error("Error al cargar la encuesta:", error);
+          console.error("Error al cargar el formulario:", error);
           toast({
             title: "Error",
-            description: "Error de red al cargar la encuesta.",
+            description: "Error de red al cargar el formulario.",
             duration: 5000,
             variant: "destructive",
           });
@@ -135,6 +140,7 @@ export default function SurveyManager() {
 
       const dataToSend = {
         ...surveyData,
+        questions: undefined, // questions are saved from the Preguntas tab, never from here
         status: undefined,
         userId: userId,
         startDate: surveyData.startDate || null,
@@ -161,8 +167,8 @@ export default function SurveyManager() {
           isPublished: result.status === "PUBLISHED"
         }));
         toast({
-          title: `Encuesta ${currentSurveyId ? 'actualizada' : 'creada'} exitosamente.`,
-          description: `La encuesta "${name}" ha sido ${currentSurveyId ? "actualizado" : "creado"} exitosamente.`,
+          title: `Formulario ${currentSurveyId ? 'actualizada' : 'creada'} exitosamente.`,
+          description: `El formulario "${name}" ha sido ${currentSurveyId ? "actualizado" : "creado"} exitosamente.`,
           duration: 5000,
           variant: "success",
         });
@@ -170,8 +176,8 @@ export default function SurveyManager() {
       } else {
         const error = await response.json();
         toast({
-          title: `Error al ${currentSurveyId ? 'actualizar' : 'crear'} la encuesta`,
-          description: `Error al ${currentSurveyId ? 'actualizar' : 'crear'} la encuesta`,
+          title: `Error al ${currentSurveyId ? 'actualizar' : 'crear'} el formulario`,
+          description: `Error al ${currentSurveyId ? 'actualizar' : 'crear'} el formulario`,
           duration: 5000,
           variant: "destructive",
         });
@@ -179,8 +185,8 @@ export default function SurveyManager() {
     } catch (error) {
       console.error("Error:", error);
       toast({
-        title: `Error de red al ${currentSurveyId ? 'actualizar' : 'crear'} la encuesta`,
-        description: `Error de red al ${currentSurveyId ? 'actualizar' : 'crear'} la encuesta`,
+        title: `Error de red al ${currentSurveyId ? 'actualizar' : 'crear'} el formulario`,
+        description: `Error de red al ${currentSurveyId ? 'actualizar' : 'crear'} el formulario`,
         duration: 5000,
         variant: "destructive",
       });
@@ -200,7 +206,7 @@ export default function SurveyManager() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-lg text-red-600">Debes iniciar sesión para gestionar encuestas.</p>
+        <p className="text-lg text-red-600">Debes iniciar sesión para gestionar formularios.</p>
       </div>
     );
   }
@@ -226,7 +232,7 @@ export default function SurveyManager() {
             <InlineEditable
               value={surveyData.title}
               onChange={(newValue) => setSurveyData({ ...surveyData, title: newValue })}
-              placeholder="Ej: Encuesta de Satisfacción del Cliente"
+              placeholder="Ej: Formulario de Satisfacción del Cliente"
               as="input"
               displayAs="h1"
               className="text-white"
@@ -234,7 +240,7 @@ export default function SurveyManager() {
             <InlineEditable
               value={surveyData.description}
               onChange={(newValue) => setSurveyData({ ...surveyData, description: newValue })}
-              placeholder="Describe el propósito de tu encuesta..."
+              placeholder="Describe el propósito de tu formulario..."
               as="textarea"
               displayAs="p"
               className="text-white/90"
@@ -263,7 +269,7 @@ export default function SurveyManager() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
                 disabled={isCreatingNewSurvey}
-                title={isCreatingNewSurvey ? "Primero debes guardar la configuración de la encuesta." : ""}
+                title={isCreatingNewSurvey ? "Primero debes guardar la configuración del formulario." : ""}
               >
                 <Pencil />
                 <span>Preguntas</span>
@@ -304,7 +310,7 @@ export default function SurveyManager() {
                     type="text"
                     id="customLink"
                     required
-                    placeholder="mi-encuesta-personalizada"
+                    placeholder="mi-formulario"
                     value={surveyData.customLink}
                     onChange={(e) => setSurveyData({ ...surveyData, customLink: e.target.value })}
                     className="flex-1 px-3 py-2 border border-gray-200 rounded-r-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition"
@@ -394,6 +400,59 @@ export default function SurveyManager() {
                     />
                     <span className="text-sm font-medium text-gray-700">Pedir email al participante antes de las preguntas</span>
                   </label>
+
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={surveyData.isTemplate}
+                      onChange={(e) => setSurveyData({ ...surveyData, isTemplate: e.target.checked })}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Usar como plantilla (aparece al crear un formulario nuevo)</span>
+                  </label>
+                </div>
+
+                <div className="space-y-3 rounded-md border border-gray-200 p-4">
+                  <h3 className="text-sm font-semibold text-gray-800">Apariencia del formulario</h3>
+                  <p className="text-xs text-gray-500">Si lo dejas vacío se usan los valores por defecto de Configuración.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">URL del logo</label>
+                      <input
+                        type="text"
+                        value={surveyData.theme?.logoUrl ?? ""}
+                        onChange={(e) => setSurveyData({ ...surveyData, theme: { ...surveyData.theme, logoUrl: e.target.value } })}
+                        placeholder="https://… o /ics-logo.jpg"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Color principal</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={surveyData.theme?.primaryColor ?? "#2563eb"}
+                          onChange={(e) => setSurveyData({ ...surveyData, theme: { ...surveyData.theme, primaryColor: e.target.value } })}
+                          className="h-9 w-14 border border-gray-300 rounded"
+                        />
+                        {surveyData.theme?.primaryColor && (
+                          <button type="button" className="text-xs text-gray-500 hover:text-gray-700" onClick={() => setSurveyData({ ...surveyData, theme: { ...surveyData.theme, primaryColor: undefined } })}>
+                            Quitar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Mensaje al terminar</label>
+                    <textarea
+                      rows={2}
+                      value={surveyData.theme?.thankYouMessage ?? ""}
+                      onChange={(e) => setSurveyData({ ...surveyData, theme: { ...surveyData.theme, thankYouMessage: e.target.value } })}
+                      placeholder="Your response has been submitted successfully."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -438,7 +497,7 @@ export default function SurveyManager() {
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={surveyLoading}
                 >
-                  {isCreatingNewSurvey ? "Crear Encuesta y continuar" : "Guardar cambios"}
+                  {isCreatingNewSurvey ? "Crear Formulario y continuar" : "Guardar cambios"}
                 </button>
               </div>
             </form>

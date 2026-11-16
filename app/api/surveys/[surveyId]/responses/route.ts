@@ -162,15 +162,23 @@ export async function POST(request: NextRequest, { params: resolvedParams }: Pro
       );
     }
 
-    // Check for duplicate responses if not allowed
-    if (!survey.allowMultipleResponses && clientUserId && !survey.isAnonymous) {
-      const existingResponse = await prisma.surveyResponse.findFirst({
-        where: { surveyId, userId: clientUserId },
-      });
-
-      if (existingResponse) {
+    // One response per person when the form doesn't allow several: a cookie set on the first
+    // submission (works for anonymous forms) and, when the form collects it, the email.
+    const respondedCookie = `sn_r_${surveyId}`;
+    if (!survey.allowMultipleResponses) {
+      const normalizedEmail = survey.collectEmail && email ? String(email).trim() : '';
+      const already =
+        request.cookies.get(respondedCookie)?.value === '1' ||
+        (clientUserId && !survey.isAnonymous &&
+          !!(await prisma.surveyResponse.findFirst({ where: { surveyId, userId: clientUserId }, select: { id: true } }))) ||
+        (normalizedEmail &&
+          !!(await prisma.surveyResponse.findFirst({
+            where: { surveyId, email: { equals: normalizedEmail, mode: 'insensitive' } },
+            select: { id: true },
+          })));
+      if (already) {
         return NextResponse.json(
-          { message: 'Ya has enviado una respuesta para esta encuesta. No se permiten múltiples respuestas.' },
+          { message: 'You have already submitted a response to this form.' },
           { status: 409, headers: withCors(origin) }
         );
       }
@@ -253,7 +261,15 @@ export async function POST(request: NextRequest, { params: resolvedParams }: Pro
       return createdResponse;
     });
 
-    return NextResponse.json(newSurveyResponse, { status: 201, headers: withCors(origin) });
+    const res = NextResponse.json(newSurveyResponse, { status: 201, headers: withCors(origin) });
+    res.cookies.set(respondedCookie, '1', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 365,
+      path: '/',
+    });
+    return res;
 
   } catch (error: any) {
     console.error(`API /responses POST error for ${surveyId}:`, error);

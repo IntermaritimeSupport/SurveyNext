@@ -16,7 +16,7 @@ import Loader from "../loaders/loader"
 // Define la URL base de la API (misma lógica que en auth-context)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
-// Definir una interfaz para la encuesta que incluya el conteo de respuestas
+// Definir una interfaz paral formulario que incluya el conteo de respuestas
 // dado que tu API devuelve _count.responses
 interface SurveyWithCount extends PrismaSurvey {
   _count?: {
@@ -34,7 +34,7 @@ export function RecentSurveys() {
       setLoading(true)
       setError(null)
       try {
-        const response = await fetch(`${API_BASE_URL}/api/surveys`) // Llama a tu API de encuestas
+        const response = await fetch(`${API_BASE_URL}/api/surveys`) // Llama a tu API de formularios
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
@@ -48,7 +48,7 @@ export function RecentSurveys() {
         setSurveys(recent)
       } catch (err: any) {
         console.error("Error fetching recent surveys:", err)
-        setError("Error al cargar las encuestas recientes.")
+        setError("Error al cargar los formularios recientes.")
       } finally {
         setLoading(false)
       }
@@ -72,7 +72,7 @@ export function RecentSurveys() {
     return (
       <Card className="survey-card">
         <CardHeader className="py-3">
-          <CardTitle className="text-base">Encuestas Recientes</CardTitle>
+          <CardTitle className="text-base">Formularios Recientes</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-6">
           <Loader/>
@@ -85,7 +85,7 @@ export function RecentSurveys() {
     return (
       <Card className="survey-card">
         <CardHeader className="py-3">
-          <CardTitle className="text-base">Encuestas Recientes</CardTitle>
+          <CardTitle className="text-base">Formularios Recientes</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-6">
@@ -100,13 +100,13 @@ export function RecentSurveys() {
     return (
       <Card className="survey-card">
         <CardHeader className="py-3">
-          <CardTitle className="text-base">Encuestas Recientes</CardTitle>
+          <CardTitle className="text-base">Formularios Recientes</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-6">
-            <p className="text-slate-500 mb-2 text-sm">No hay encuestas creadas aún</p>
+            <p className="text-slate-500 mb-2 text-sm">No hay formularios creados aún</p>
             <Link href="/admin/surveys/create">
-              <Button size="sm">Crear Primera Encuesta</Button>
+              <Button size="sm">Crear Primer Formulario</Button>
             </Link>
           </div>
         </CardContent>
@@ -117,7 +117,7 @@ export function RecentSurveys() {
   return (
     <Card className="survey-card">
       <CardHeader className="flex flex-row items-center justify-between py-3 px-4">
-        <CardTitle className="text-base">Encuestas Recientes</CardTitle>
+        <CardTitle className="text-base">Formularios Recientes</CardTitle>
         <Link href="/admin/surveys">
           <Button variant="outline" size="sm" className="h-7 px-2 text-xs bg-transparent">
             Ver Todas
@@ -128,7 +128,7 @@ export function RecentSurveys() {
         <Table>
           <TableHeader>
             <TableRow className="border-b">
-              <TableHead className="py-2 px-4 text-xs font-medium text-slate-600">Encuesta</TableHead>
+              <TableHead className="py-2 px-4 text-xs font-medium text-slate-600">Formulario</TableHead>
               <TableHead className="py-2 px-4 text-xs font-medium text-slate-600">Estado</TableHead>
               <TableHead className="py-2 px-4 text-xs font-medium text-slate-600">Respuestas</TableHead>
               <TableHead className="py-2 px-4 text-xs font-medium text-slate-600 text-right">Acciones</TableHead>
