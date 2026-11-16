@@ -29,6 +29,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { SurveyQuestionResponsesChart } from "@/components/charts/chart-pie-interactive"
+import { getParticipant } from "@/lib/responses/participant"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
@@ -51,10 +52,6 @@ type APIAnswer = {
 type APIResponseItem = {
   id: string
   email: string | null
-  company?: string | null
-  fullName?: string | null
-  ships?: number | null
-  position?: string | null
   ipAddress?: string | null
   userAgent?: string | null
   startedAt: string
@@ -224,13 +221,8 @@ export default function SurveyResponsesListPage() {
     if (searchParticipant && searchParticipant.trim() !== "") {
       const q = searchParticipant.toLowerCase()
       rows = rows.filter((r) => {
-        const candidate =
-          (r.fullName && r.fullName.toLowerCase()) ||
-          (r.user?.name && r.user.name.toLowerCase()) ||
-          (r.user?.email && r.user.email.toLowerCase()) ||
-          (r.email && r.email.toLowerCase()) ||
-          ""
-        return candidate.includes(q)
+        const { name, detail } = getParticipant(r)
+        return `${name} ${detail ?? ""}`.toLowerCase().includes(q)
       })
     }
 
@@ -463,7 +455,7 @@ export default function SurveyResponsesListPage() {
     const rows: any[][] = []
 
     filteredRows.forEach((resp) => {
-      const name = resp.fullName || resp.user?.name || resp.user?.email || resp.email || "Anónimo"
+      const name = getParticipant(resp).name
       const date = new Date(resp.startedAt).toLocaleString()
       const state = resp.isComplete ? "Completada" : "Incompleta"
       const totalAppreciation = totalAppreciationByResponseId[resp.id] || "—"
@@ -550,7 +542,7 @@ export default function SurveyResponsesListPage() {
       ...remainingQuestions.map((q) => q.title) // Then the rest
     ]
 
-    const name = resp.fullName || resp.user?.name || resp.user?.email || resp.email || "Anónimo"
+    const name = getParticipant(resp).name
     const date = new Date(resp.startedAt).toLocaleString()
     const state = resp.isComplete ? "Completada" : "Incompleta"
     const totalAppreciation = totalAppreciationByResponseId[resp.id] || "—" 
@@ -853,7 +845,8 @@ export default function SurveyResponsesListPage() {
                   </TableRow>
                 ) : (
                   filteredRows.map((resp) => {
-                    const participantName = resp.fullName || resp.user?.name || resp.user?.email || resp.email || "Anónimo"
+                    const participant = getParticipant(resp)
+                    const participantName = participant.name
                     const appreciationTotal = totalAppreciationByResponseId[resp.id]
                     
                     return (
@@ -864,7 +857,7 @@ export default function SurveyResponsesListPage() {
                             <User className="h-4 w-4 text-gray-400" />
                             <div>
                               <div className="text-sm font-medium">{participantName}</div>
-                              <div className="text-xs text-slate-400">{resp.company ?? resp.position ?? "-"}</div>
+                              <div className="text-xs text-slate-400">{participant.detail ?? "-"}</div>
                             </div>
                           </div>
                         </TableCell>

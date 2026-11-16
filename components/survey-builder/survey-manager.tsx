@@ -37,6 +37,7 @@ export interface SurveyData {
   isAnonymous: boolean;
   showProgress: boolean;
   allowMultipleResponses: boolean;
+  collectEmail: boolean;
   startDate: string;
   endDate: string;
   isPublished: boolean;
@@ -61,6 +62,7 @@ export default function SurveyManager() {
     isAnonymous: false,
     showProgress: true,
     allowMultipleResponses: false,
+    collectEmail: true,
     startDate: "",
     endDate: "",
     isPublished: false,
@@ -378,6 +380,16 @@ export default function SurveyManager() {
                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
                     <span className="text-sm font-medium text-gray-700">Permitir múltiples respuestas por usuario</span>
+                  </label>
+
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={surveyData.collectEmail}
+                      onChange={(e) => setSurveyData({ ...surveyData, collectEmail: e.target.checked })}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Pedir email al participante antes de las preguntas</span>
                   </label>
                 </div>
 

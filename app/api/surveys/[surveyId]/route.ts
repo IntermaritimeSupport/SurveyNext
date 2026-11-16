@@ -55,7 +55,7 @@ export async function PUT(request: NextRequest, { params: resolvedParams }: Prop
     const body = await request.json();
     const {
       title, description, customLink, isAnonymous, showProgress,
-      allowMultipleResponses, startDate, endDate, isPublished,
+      allowMultipleResponses, collectEmail, startDate, endDate, isPublished,
       questions: incomingQuestions
     } = body;
 
@@ -123,6 +123,7 @@ export async function PUT(request: NextRequest, { params: resolvedParams }: Prop
           isAnonymous,
           showProgress,
           allowMultipleResponses,
+          collectEmail,
           startDate: parsedStartDate,
           endDate: parsedEndDate,
         },

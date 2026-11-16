@@ -24,11 +24,7 @@ interface AnswerInput {
 }
 
 interface PostResponseBody {
-  email?: string;
-  position: string | null
-  ships: string | null
-  fullName: string | null
-  company: string | null
+  email?: string | null;
   userId?: string;
   answers: AnswerInput[];
   isComplete?: boolean;
@@ -105,10 +101,6 @@ export async function POST(request: NextRequest, { params: resolvedParams }: Pro
     const {
       email,
       userId: clientUserId,
-      company,
-      fullName,
-      position,
-      ships,
       answers,
       isComplete = false,
     } = body;
@@ -386,29 +378,16 @@ export async function POST(request: NextRequest, { params: resolvedParams }: Pro
 
     // --- Create Response Transaction ---
     const newSurveyResponse = await prisma.$transaction(async tx => {
-      // Determine if respondent metadata should be saved
+      // Anonymous forms never link the response to a user account
       const isAnonymous = survey.isAnonymous;
-
-      // Validate 'ships' if provided (since it's Int in the model)
-      let processedShips = null;
-      if (ships !== undefined && ships !== null) {
-        processedShips = parseInt(String(ships), 10);
-        if (isNaN(processedShips)) {
-          throw new Error("El valor de 'ships' debe ser un número entero.");
-        }
-      }
 
       const createdResponse = await tx.surveyResponse.create({
         data: {
           surveyId,
 
           // Respondent Metadata (null if anonymous)
-          email: isAnonymous ? null : email,
+          email: survey.collectEmail && email ? String(email).trim() : null,
           userId: isAnonymous ? null : clientUserId,
-          company: isAnonymous ? null : company,
-          fullName: isAnonymous ? null : fullName,
-          position: isAnonymous ? null : position,
-          ships: isAnonymous ? null : processedShips,
 
           // Request Metadata
           ipAddress,
@@ -461,8 +440,6 @@ export async function POST(request: NextRequest, { params: resolvedParams }: Pro
         ? 409 // Unique constraint failed
         : error.code === 'P2003'
         ? 400 // Foreign key constraint failed
-        : error.message.includes('ships')
-        ? 400 // Custom validation error for 'ships'
         : 500;
 
     return NextResponse.json(

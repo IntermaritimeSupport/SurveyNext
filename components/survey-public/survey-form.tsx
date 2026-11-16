@@ -22,6 +22,7 @@ interface PublicSurvey {
   isAnonymous: boolean
   showProgress: boolean
   allowMultipleResponses: boolean
+  collectEmail?: boolean
   status?: SurveyStatus
   startDate?: string
   endDate?: string
@@ -60,15 +61,11 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
   const [isLoading, setIsLoading] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Map<string, string>>(() => new Map())
   const [respondentEmail, setRespondentEmail] = useState("")
-  // ✅ Nuevos estados para los campos adicionales
-  const [respondentCompany, setRespondentCompany] = useState("")
-  const [respondentFullName, setRespondentFullName] = useState("")
-  const [respondentPosition, setRespondentPosition] = useState("")
-  const [respondentShips, setRespondentShips] = useState<string>("") // Lo manejamos como string para el input
 
   const [isCompleted, setIsCompleted] = useState(false)
 
-  const isEmailRequired = !survey.isAnonymous
+  // Solo se pide el email si el formulario lo recoge (por defecto, los no anónimos)
+  const isEmailRequired = survey.collectEmail ?? !survey.isAnonymous
   const [isShowingEmailStep, setIsShowingEmailStep] = useState(isEmailRequired)
 
   const sortedQuestions = useMemo(() => initialQuestions.sort((a, b) => a.order - b.order), [initialQuestions])
@@ -327,20 +324,6 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
       }
     }
 
-    // Ships validation (if provided, must be a number)
-    if (respondentShips.trim() && isNaN(Number(respondentShips))) {
-      newErrors.set("ships", "Ships must be a valid number.")
-      hasErrors = true
-    }
-
-    // Other fields (`company`, `fullName`, `position`) are optional strings for now,
-    // so no specific validation beyond trimming is needed unless you add custom validation rules.
-    // E.g., if `company` was required:
-    // if (isCompanyRequired && !respondentCompany.trim()) {
-    //   newErrors.set("company", "Company name is required.");
-    //   hasErrors = true;
-    // }
-
     setValidationErrors(newErrors)
     return !hasErrors
   }
@@ -441,10 +424,6 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
       const responseData = {
         surveyId: survey.id,
         email: isEmailRequired ? respondentEmail : null,
-        company: respondentCompany || null, // ✅ Añadido
-        fullName: respondentFullName || null, // ✅ Añadido
-        position: respondentPosition || null, // ✅ Añadido
-        ships: respondentShips ? Number(respondentShips) : null, // ✅ Añadido (convertir a número)
         answers: answersForApi,
         isComplete: true,
       }
@@ -546,7 +525,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                     {isEmailRequired && <span className="text-red-500 ml-1">*</span>}
                   </h3>
                   <p className="text-sm sm:text-base text-slate-600">
-                    Please provide your contact details to complete the survey.
+                    Please provide your email to complete the survey.
                   </p>
                 </div>
 
@@ -571,7 +550,6 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                       }}
                       placeholder="your@email.com"
                       className={`mt-1 ${validationErrors.has("email") ? "border-red-300 focus:border-red-300 focus:ring-red-200" : "focus:border-blue-500 focus:ring-blue-200"}`}
-                      disabled={survey.isAnonymous} // Disable if survey is anonymous
                     />
                     {validationErrors.get("email") && (
                       <p className="text-sm text-red-600 mt-2 flex items-center">
@@ -587,153 +565,6 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
                     )}
                   </div>
 
-                  {/* Full Name Input */}
-                  <div>
-                    <Label htmlFor="fullName" className="text-sm font-medium text-slate-700">
-                      Full Name
-                      {isEmailRequired && <span className="text-red-500 ml-1">*</span>}
-                    </Label>
-                    <Input
-                      id="fullName"
-                      type="text"
-                      required
-                      value={respondentFullName}
-                      onChange={(e) => {
-                        setRespondentFullName(e.target.value)
-                        setValidationErrors((prev) => {
-                          const newErrors = new Map(prev)
-                          newErrors.delete("fullName")
-                          return newErrors
-                        })
-                      }}
-                      placeholder="John Doe"
-                      className={`mt-1 ${validationErrors.has("fullName") ? "border-red-300 focus:border-red-300 focus:ring-red-200" : "focus:border-blue-500 focus:ring-blue-200"}`}
-                      disabled={survey.isAnonymous} // Disable if survey is anonymous
-                    />
-                    {validationErrors.get("fullName") && (
-                      <p className="text-sm text-red-600 mt-2 flex items-center">
-                        <svg className="w-4 h-4 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path
-                            fillRule="evenodd"
-                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        {validationErrors.get("fullName")}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Company Input */}
-                  <div>
-                    <Label htmlFor="company" className="text-sm font-medium text-slate-700">
-                      Company name as per DOC
-                      {isEmailRequired && <span className="text-red-500 ml-1">*</span>}
-                    </Label>
-                    <Input
-                      id="company"
-                      required
-                      type="text"
-                      value={respondentCompany}
-                      onChange={(e) => {
-                        setRespondentCompany(e.target.value)
-                        setValidationErrors((prev) => {
-                          const newErrors = new Map(prev)
-                          newErrors.delete("company")
-                          return newErrors
-                        })
-                      }}
-                      placeholder="Acme Corp"
-                      className={`mt-1 ${validationErrors.has("company") ? "border-red-300 focus:border-red-300 focus:ring-red-200" : "focus:border-blue-500 focus:ring-blue-200"}`}
-                      disabled={survey.isAnonymous}
-                    />
-                    {validationErrors.get("company") && (
-                      <p className="text-sm text-red-600 mt-2 flex items-center">
-                        <svg className="w-4 h-4 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path
-                            fillRule="evenodd"
-                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        {validationErrors.get("company")}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Position Input */}
-                  <div>
-                    <Label htmlFor="position" className="text-sm font-medium text-slate-700">
-                      Position
-                      {isEmailRequired && <span className="text-red-500 ml-1">*</span>}
-                    </Label>
-                    <Input
-                      id="position"
-                      type="text"
-                      required
-                      value={respondentPosition}
-                      onChange={(e) => {
-                        setRespondentPosition(e.target.value)
-                        setValidationErrors((prev) => {
-                          const newErrors = new Map(prev)
-                          newErrors.delete("position")
-                          return newErrors
-                        })
-                      }}
-                      placeholder="Software Engineer"
-                      className={`mt-1 ${validationErrors.has("position") ? "border-red-300 focus:border-red-300 focus:ring-red-200" : "focus:border-blue-500 focus:ring-blue-200"}`}
-                      disabled={survey.isAnonymous}
-                    />
-                    {validationErrors.get("position") && (
-                      <p className="text-sm text-red-600 mt-2 flex items-center">
-                        <svg className="w-4 h-4 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path
-                            fillRule="evenodd"
-                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        {validationErrors.get("position")}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Ships Input */}
-                  <div>
-                    <Label htmlFor="ships" className="text-sm font-medium text-slate-700">
-                      Number of Ships with ICS
-                      {isEmailRequired && <span className="text-red-500 ml-1">*</span>}
-                    </Label>
-                    <Input
-                      id="ships"
-                      type="number" // Use type="number" for better mobile input and validation
-                      required
-                      value={respondentShips}
-                      onChange={(e) => {
-                        setRespondentShips(e.target.value)
-                        setValidationErrors((prev) => {
-                          const newErrors = new Map(prev)
-                          newErrors.delete("ships")
-                          return newErrors
-                        })
-                      }}
-                      placeholder="e.g., 5"
-                      className={`mt-1 ${validationErrors.has("ships") ? "border-red-300 focus:border-red-300 focus:ring-red-200" : "focus:border-blue-500 focus:ring-blue-200"}`}
-                      disabled={survey.isAnonymous}
-                    />
-                    {validationErrors.get("ships") && (
-                      <p className="text-sm text-red-600 mt-2 flex items-center">
-                        <svg className="w-4 h-4 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path
-                            fillRule="evenodd"
-                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        {validationErrors.get("ships")}
-                      </p>
-                    )}
-                  </div>
                 </div>
               </div>
             ) : currentQuestionsBlock.length > 0 ? (
