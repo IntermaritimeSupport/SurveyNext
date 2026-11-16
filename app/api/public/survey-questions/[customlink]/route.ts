@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { withCors } from '@/lib/cors'
+import { FORM_DEFAULTS_KEY, resolveTheme } from '@/lib/forms/theme'
 
 // Preflight request (OPTIONS)
 export async function OPTIONS(req: NextRequest) {
@@ -39,6 +40,7 @@ export async function GET(
         showProgress: true,
         allowMultipleResponses: true,
         collectEmail: true,
+        theme: true,
         startDate: true,
         endDate: true,
       },
@@ -73,6 +75,8 @@ export async function GET(
       )
     }
 
+    const defaults = await prisma.systemSetting.findUnique({ where: { key: FORM_DEFAULTS_KEY } })
+
     // Preguntas de la encuesta
     const questions = await prisma.question.findMany({
       where: { surveyId: survey.id },
@@ -100,6 +104,7 @@ export async function GET(
           showProgress: survey.showProgress,
           allowMultipleResponses: survey.allowMultipleResponses,
           collectEmail: survey.collectEmail,
+          theme: resolveTheme(survey.theme, defaults?.value),
         },
         questions,
       },

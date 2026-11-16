@@ -57,7 +57,7 @@ export function LinkSharing({ surveyTitle, customLink, isActive }: LinkSharingPr
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p className="text-xs">Abrir encuesta</p>
+            <p className="text-xs">Abrir formulario</p>
           </TooltipContent>
         </Tooltip>
       </div>

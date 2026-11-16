@@ -116,6 +116,8 @@ model Survey {
   showProgress Boolean @default(true)
   allowMultipleResponses Boolean @default(false)
   collectEmail Boolean @default(true) // Ask the respondent for an email before the questions
+  isTemplate  Boolean  @default(false) // Shown in the template gallery when creating a form
+  theme       Json?    // { logoUrl, primaryColor, thankYouMessage }
   startDate   DateTime?
   endDate     DateTime?
   createdAt   DateTime @default(now())

@@ -14,21 +14,21 @@ export default function HomePage() {
     // {
     //   icon: PlusCircle,
     //   title: t("createSurvey"),
-    //   description: "Crea encuestas personalizadas con diferentes tipos de preguntas",
+    //   description: "Crea formularios personalizados con diferentes tipos de preguntas",
     //   href: "/admin/surveys/create",
     //   color: "text-blue-600",
     // },
     {
       icon: FileText,
       title: t("surveys"),
-      description: "Gestiona todas tus encuestas desde un panel centralizado",
+      description: "Gestiona todas tus formularios desde un panel centralizado",
       href: "/admin/surveys",
       color: "text-green-600",
     },
     // {
     //   icon: Users,
     //   title: t("responses"),
-    //   description: "Visualiza y analiza las respuestas de tus encuestas",
+    //   description: "Visualiza y analiza las respuestas de tus formularios",
     //   href: "/admin/responses",
     //   color: "text-purple-600",
     // },
@@ -52,7 +52,7 @@ export default function HomePage() {
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
                   <BarChart3 className="w-5 h-5 text-white" />
                 </div>
-                <h1 className="text-xl font-bold text-slate-900">Sistema de Encuestas</h1>
+                <h1 className="text-xl font-bold text-slate-900">Sistema de Formularios</h1>
               </div>
             </div>
 
@@ -72,9 +72,9 @@ export default function HomePage() {
       {/* Hero Section */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-slate-900 mb-4">Sistema Profesional de Encuestas</h2>
+          <h2 className="text-4xl font-bold text-slate-900 mb-4">Sistema Profesional de Formularios</h2>
           <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-            Crea, gestiona y analiza encuestas con enlaces personalizados. Soporte multiidioma y reportes detallados
+            Crea, gestiona y analiza formularios con enlaces personalizados. Soporte multiidioma y reportes detallados
             para tomar mejores decisiones.
           </p>
         </div>
