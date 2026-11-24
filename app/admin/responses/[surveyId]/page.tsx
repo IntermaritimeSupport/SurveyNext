@@ -180,7 +180,7 @@ export default function SurveyResponsesListPage() {
   // Fetching responses (with answers)
   useEffect(() => {
     if (!surveyId) {
-      setErrorResponses("ID de encuesta no proporcionado.")
+      setErrorResponses("ID de formulario no proporcionado.")
       setLoadingResponses(false)
       return
     }
@@ -199,8 +199,8 @@ export default function SurveyResponsesListPage() {
           const sr = await fetch(`${API_BASE_URL}/api/surveys/${surveyId}`)
           if (sr.ok) {
             const sd = await sr.json()
-            setSelectedSurveyTitle(sd.title ?? "Encuesta")
-          } else setSelectedSurveyTitle("Encuesta Desconocida")
+            setSelectedSurveyTitle(sd.title ?? "Formulario")
+          } else setSelectedSurveyTitle("Formulario Desconocido")
         }
 
         // also prepare chart data

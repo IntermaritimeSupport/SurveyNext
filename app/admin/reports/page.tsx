@@ -49,7 +49,7 @@ export default function ReportsPage() {
         // necesitarías endpoints adicionales o un `include` más profundo.
         const response = await fetch("/api/surveys?include=_count&include=questions") 
         if (!response.ok) {
-          throw new Error(`Error al cargar datos de encuestas: ${response.status}`)
+          throw new Error(`Error al cargar datos de formularios: ${response.status}`)
         }
         const data: APISurveyWithQuestions[] = await response.json()
         setAllSurveys(data)
@@ -85,7 +85,7 @@ export default function ReportsPage() {
     // Consulta los resultados de búsqueda [1], [2], [9], [12], [13], [16] para opciones de PDF.
     // Ejemplo básico para CSV:
     // const csvData = generateCSV(allSurveys);
-    // downloadCSV(csvData, "reporte-encuestas.csv");
+    // downloadCSV(csvData, "reporte-formularios.csv");
   }
 
   if (loading) {
@@ -115,7 +115,7 @@ export default function ReportsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-extrabold tracking-tight text-gray-900">Reportes</h1>
-            <p className="text-lg text-gray-600 mt-2">Análisis detallado y métricas de tus encuestas.</p>
+            <p className="text-lg text-gray-600 mt-2">Análisis detallado y métricas de tus formularios.</p>
           </div>
           <Button onClick={handleGenerateReport} className="bg-green-600 hover:bg-green-700 text-white shadow-md">
             <Download className="w-5 h-5 mr-2" />
@@ -126,24 +126,24 @@ export default function ReportsPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <SurveyOverviewCards
-              title="Total de Encuestas"
+              title="Total de Formularios"
               value={allSurveys.length.toLocaleString()}
-              description="Número total de encuestas creadas."
+              description="Número total de formularios creados."
             />
             <SurveyOverviewCards
               title="Total de Respuestas"
               value={totalResponses.toLocaleString()}
-              description="Respuestas acumuladas en todas las encuestas."
+              description="Respuestas acumuladas en todas los formularios."
             />
             <SurveyOverviewCards
               title="Respuestas Anónimas"
               value={totalAnonymousResponses.toLocaleString()}
-              description="Total de respuestas de encuestas anónimas."
+              description="Total de respuestas de formularios anónimos."
             />
             <SurveyOverviewCards
-              title="Promedio Resp./Encuesta"
+              title="Promedio Resp./Formulario"
               value={averageResponsesPerSurvey.toFixed(2)}
-              description="Promedio de respuestas por encuesta."
+              description="Promedio de respuestas por formulario."
             />
           </div>
         </section>

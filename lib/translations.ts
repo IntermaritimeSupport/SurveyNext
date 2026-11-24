@@ -2,7 +2,7 @@ export const translations = {
   es: {
     // Navegación y general
     admin: "Panel de Control",
-    surveys: "Encuestas",
+    surveys: "Formularios",
     responses: "Respuestas",
     reports: "Reportes",
     settings: "Configuración",
@@ -13,9 +13,9 @@ export const translations = {
     cancel: "Cancelar",
     loading: "Cargando...",
 
-    // Encuestas
-    createSurvey: "Crear Encuesta",
-    surveyTitle: "Título de la Encuesta",
+    // Formularios
+    createSurvey: "Crear Formulario",
+    surveyTitle: "Título del Formulario",
     surveyDescription: "Descripción",
     customLink: "Enlace Personalizado",
     isActive: "Activa",

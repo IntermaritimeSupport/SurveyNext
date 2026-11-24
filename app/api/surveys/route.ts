@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SurveyStatus, QuestionType } from '@prisma/client'
 import prisma from '@/lib/prisma'
 import { withCors } from '@/lib/cors'
+import { sanitizeTheme } from '@/lib/forms/theme'
 
 // Preflight request (OPTIONS)
 export async function OPTIONS(req: NextRequest) {
@@ -48,6 +49,8 @@ export async function POST(request: NextRequest) {
       showProgress,
       allowMultipleResponses,
       collectEmail,
+      isTemplate,
+      theme,
       startDate,
       endDate,
       userId,
@@ -70,6 +73,8 @@ export async function POST(request: NextRequest) {
         showProgress: showProgress ?? true,
         allowMultipleResponses: allowMultipleResponses || false,
         collectEmail: collectEmail ?? !isAnonymous,
+        isTemplate: isTemplate === true,
+        theme: theme ? (sanitizeTheme(theme) as object) : undefined,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
         userId,

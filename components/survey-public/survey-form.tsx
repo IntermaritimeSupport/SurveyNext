@@ -12,7 +12,7 @@ import { ProgressBar } from "./progress-bar"
 
 import { QuestionType as PrismaQuestionType, type SurveyStatus } from "@prisma/client"
 import { CheckCircle, ChevronLeft, ChevronRight, Loader2, Send } from "lucide-react"
-import Imagenes from "@/lib/images"
+import type { FormTheme } from "@/lib/forms/theme"
 import { validateAnswer as validateSharedAnswer } from "@/lib/forms/validate"
 import { isAnswerable } from "@/lib/forms/question-types"
 import { paginate, visibleQuestionIds } from "@/lib/forms/logic"
@@ -25,6 +25,7 @@ interface PublicSurvey {
   showProgress: boolean
   allowMultipleResponses: boolean
   collectEmail?: boolean
+  theme?: FormTheme
   status?: SurveyStatus
   startDate?: string
   endDate?: string
@@ -66,6 +67,8 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
   const [respondentEmail, setRespondentEmail] = useState("")
 
   const [isCompleted, setIsCompleted] = useState(false)
+  // Marca del formulario (logo, color, mensaje final) ya combinada con los valores por defecto
+  const theme: FormTheme = survey.theme ?? {}
 
   // Solo se pide el email si el formulario lo recoge (por defecto, los no anónimos)
   const isEmailRequired = survey.collectEmail ?? !survey.isAnonymous
@@ -102,6 +105,10 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
     const result = validateSharedAnswer(question, answerValue)
     return result.ok ? null : result.error
   }
+
+  const answersForCount = sortedQuestions.filter(
+    (q) => isAnswerable(q.type) && visibleIds.has(q.id) && currentAnswers.has(q.id),
+  ).length
 
   const handleAnswerChange = useCallback((questionId: string, value: any) => {
     setCurrentAnswers((prev) => {
@@ -247,13 +254,13 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
 
       if (!apiResponse.ok) {
         const errorData = await apiResponse.json()
-        throw new Error(errorData.message || "Unknown error while submitting the survey.")
+        throw new Error(errorData.message || "Unknown error while submitting the form.")
       }
 
       setIsCompleted(true)
     } catch (error: any) {
       console.error("SurveyForm: Error submitting survey:", error)
-      setSubmissionError(error.message || "Error submitting the survey. Please try again.")
+      setSubmissionError(error.message || "Error submitting the form. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -270,16 +277,16 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-3 sm:mb-4">
               Thank you for your participation!
             </h2>
-            <p className="text-sm sm:text-base text-slate-600 mb-4 sm:mb-6">
-              Your response has been submitted successfully.
+            <p className="text-sm sm:text-base text-slate-600 mb-4 sm:mb-6 whitespace-pre-line">
+              {theme.thankYouMessage || "Your response has been submitted successfully."}
             </p>
             <div className="bg-slate-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
               <p className="text-xs sm:text-sm text-slate-600">
-                <strong>Survey:</strong> {survey.title}
+                <strong>Form:</strong> {survey.title}
                 <br />
                 <strong>Completed:</strong> {new Date().toLocaleString()}
                 <br />
-                <strong>Questions answered:</strong> {currentAnswers.size}
+                <strong>Questions answered:</strong> {answersForCount}
               </p>
             </div>
             <Button onClick={() => (window.location.href = "/")} variant="outline" className="w-full bg-transparent">
@@ -294,8 +301,13 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-3 sm:p-4 lg:p-6">
       <div className="max-w-full sm:max-w-2xl lg:max-w-3xl mx-auto">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-xl shadow-lg flex items-center justify-start  border-slate-200 px-4">
-          <img src={Imagenes?.icsLogo || ""} height={75} width={75} alt="ics.logo" className="rounded-md object-center"/>
+        <div
+          className={`rounded-t-xl shadow-lg flex items-center justify-start border-slate-200 px-4 ${theme.primaryColor ? "" : "bg-gradient-to-r from-blue-600 to-indigo-600"}`}
+          style={theme.primaryColor ? { backgroundColor: theme.primaryColor } : undefined}
+        >
+          {theme.logoUrl && (
+            <img src={theme.logoUrl} height={75} width={75} alt="" className="rounded-md object-contain bg-white/90 max-h-[75px]" />
+          )}
           <div className="px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6 text-start">
             <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-white mb-2">{survey.title}</h1>
             {survey.description && (
@@ -391,7 +403,7 @@ export function SurveyForm({ survey, questions: initialQuestions }: SurveyFormPr
               </div>
             ) : (
               <Alert variant="destructive">
-                <AlertDescription>Could not load the survey questions.</AlertDescription>
+                <AlertDescription>Could not load the form questions.</AlertDescription>
               </Alert>
             )}
 

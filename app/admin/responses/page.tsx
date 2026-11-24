@@ -35,14 +35,14 @@ export default function SurveysListPage() {
       try {
         const response = await fetch("/api/surveys?include=_count")
         if (!response.ok) {
-          throw new Error(`Error al cargar encuestas: ${response.status}`)
+          throw new Error(`Error al cargar formularios: ${response.status}`)
         }
         const data: APISurvey[] = await response.json()
         setAllSurveys(data)
         setFilteredSurveys(data)
       } catch (err: any) {
         console.error("Error fetching surveys:", err)
-        setErrorSurveys("Error al cargar las encuestas. Verifica que la API esté funcionando correctamente.")
+        setErrorSurveys("Error al cargar los formularios. Verifica que la API esté funcionando correctamente.")
       } finally {
         setLoadingSurveys(false)
       }
@@ -70,13 +70,13 @@ export default function SurveysListPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Respuestas de Encuestas</h1>
-            <p className="text-base text-gray-600">Gestiona tus encuestas y revisa sus respuestas</p>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Respuestas de Formularios</h1>
+            <p className="text-base text-gray-600">Gestiona tus formularios y revisa sus respuestas</p>
           </div>
           <Link href="/admin/surveys/create" passHref>
             <Button size="default" className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
               <PlusCircle className="w-5 h-5" />
-              <span className="ml-2">Nueva Encuesta</span>
+              <span className="ml-2">Nuevo Formulario</span>
             </Button>
           </Link>
         </div>
@@ -85,7 +85,7 @@ export default function SurveysListPage() {
           <Card className="col-span-full">
             <CardHeader>
               <CardTitle>Cargando datos del gráfico...</CardTitle>
-              <CardDescription>Obteniendo encuestas y sus respuestas.</CardDescription>
+              <CardDescription>Obteniendo formularios y sus respuestas.</CardDescription>
             </CardHeader>
             <CardContent className="flex h-[300px] items-center justify-center">
               <Loader />
@@ -107,7 +107,7 @@ export default function SurveysListPage() {
                   <Search className="w-5 h-5" />
                 </div>
                 <Input
-                  placeholder="Buscar encuestas por título o descripción..."
+                  placeholder="Buscar formularios por título o descripción..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 h-10 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500 bg-white"
@@ -126,18 +126,18 @@ export default function SurveysListPage() {
                   <FileText className="w-20 h-20 mx-auto" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  {searchTerm ? "No se encontraron encuestas" : "No hay encuestas creadas"}
+                  {searchTerm ? "No se encontraron formularios" : "No hay formularios creados"}
                 </h3>
                 <p className="text-gray-500 text-base max-w-md mx-auto">
                   {searchTerm
                     ? "Intenta ajustar el término de búsqueda para encontrar lo que buscas"
-                    : "Comienza creando tu primera encuesta para verla aquí y empezar a recopilar respuestas."}
+                    : "Comienza creando tu primer formulario para verla aquí y empezar a recopilar respuestas."}
                 </p>
                 {!searchTerm && (
                   <Link href="/admin/surveys/new" className="mt-4 inline-block">
                     <Button size="default" className="bg-blue-600 hover:bg-blue-700">
                       <PlusCircle className="w-5 h-5" />
-                      <span className="ml-2">Crear Primera Encuesta</span>
+                      <span className="ml-2">Crear Primer Formulario</span>
                     </Button>
                   </Link>
                 )}
@@ -147,7 +147,7 @@ export default function SurveysListPage() {
                 <Table>
                   <TableHeader className="bg-gray-50">
                     <TableRow className="border-b border-gray-200">
-                      <TableHead className="font-semibold text-gray-900 py-2 px-4 text-sm">Encuesta</TableHead>
+                      <TableHead className="font-semibold text-gray-900 py-2 px-4 text-sm">Formulario</TableHead>
                       <TableHead className="font-semibold text-gray-900 py-2 px-4 text-center text-sm">
                         Respuestas
                       </TableHead>
